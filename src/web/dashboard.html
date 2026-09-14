@@ -494,6 +494,141 @@
       gap: 0.75rem;
     }
 
+    /* Smart Contract Studio Styles */
+    #contracts-view {
+      display: none;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    .contracts-hero {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(168, 85, 247, 0.1));
+      border: 1px solid var(--accent-cyan);
+      border-radius: 12px;
+      padding: 1.25rem 1.75rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .contracts-hero-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .contracts-hero-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+    .contracts-badges {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .c-badge {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border);
+      color: var(--accent-cyan);
+      font-weight: 600;
+    }
+    .contracts-layout {
+      display: grid;
+      grid-template-columns: 1.15fr 1fr;
+      gap: 1.5rem;
+    }
+    @media (max-width: 960px) {
+      .contracts-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+    .contract-item {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .contract-item:hover {
+      border-color: var(--accent-cyan);
+      background: rgba(6, 182, 212, 0.08);
+    }
+    .contract-item.active {
+      border-color: var(--accent-cyan);
+      background: rgba(6, 182, 212, 0.18);
+      box-shadow: 0 0 10px rgba(6, 182, 212, 0.25);
+    }
+    .contract-tag {
+      font-size: 0.7rem;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .tag-counter { background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid #38bdf8; }
+    .tag-token { background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981; }
+    .tag-vault { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid #f59e0b; }
+    .tag-custom { background: rgba(168, 85, 247, 0.2); color: #a855f7; border: 1px solid #a855f7; }
+    .slot-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    .slot-table th {
+      text-align: left;
+      padding: 0.5rem 0.75rem;
+      background: rgba(0, 0, 0, 0.4);
+      color: var(--text-muted);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      font-weight: 600;
+      font-size: 0.75rem;
+    }
+    .slot-table td {
+      padding: 0.6rem 0.75rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      font-family: monospace;
+    }
+    .slot-val-pill {
+      color: var(--accent-green);
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 0.2rem 0.6rem;
+      border-radius: 4px;
+      font-weight: 700;
+      display: inline-block;
+      transition: all 0.3s ease;
+    }
+    .slot-val-pill.glow {
+      animation: slot-glow 0.8s ease;
+    }
+    @keyframes slot-glow {
+      0% { background: var(--accent-cyan); color: #000; box-shadow: 0 0 12px var(--accent-cyan); }
+      100% { background: rgba(16, 185, 129, 0.12); color: var(--accent-green); }
+    }
+    .log-box {
+      background: #05070d;
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      border-radius: 8px;
+      padding: 0.75rem;
+      font-family: monospace;
+      font-size: 0.75rem;
+      color: #38bdf8;
+      max-height: 150px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      line-height: 1.4;
+    }
+
     footer {
       border-top: 1px solid var(--border);
       padding: 1rem 2rem;
@@ -521,6 +656,7 @@
       <div class="mode-switch-pill">
         <button class="mode-btn active" id="btn-mode-simple">🟢 간편 모드</button>
         <button class="mode-btn" id="btn-mode-pro">📊 엔지니어 모드</button>
+        <button class="mode-btn" id="btn-mode-contracts">💻 스마트 계약 스튜디오</button>
       </div>
     </div>
   </header>
@@ -573,9 +709,12 @@
           </div>
         </div>
 
-        <div style="display: flex; gap: 1rem; width: 100%; justify-content: center;">
+        <div style="display: flex; gap: 1rem; width: 100%; justify-content: center; flex-wrap: wrap;">
           <button class="btn" id="btn-quick-claim" style="padding: 0.75rem 1.5rem; font-size: 0.95rem;">
             💳 내 지갑 관리 및 송금하기
+          </button>
+          <button class="btn btn-secondary" id="btn-goto-contracts" style="padding: 0.75rem 1.5rem; font-size: 0.95rem; border-color: var(--accent-cyan); color: var(--accent-cyan);">
+            💻 스마트 계약 스튜디오 열기
           </button>
           <button class="btn btn-secondary" id="btn-goto-pro" style="padding: 0.75rem 1.5rem; font-size: 0.95rem;">
             🔍 엔지니어 상세 그래프 보기
@@ -721,6 +860,172 @@
         </div>
       </section>
     </section>
+
+    <!-- ============================================================
+         3. SMART CONTRACT STUDIO (Deploy, Execute, Live State Inspection)
+         ============================================================ -->
+    <section id="contracts-view">
+      <!-- Hero Banner -->
+      <div class="contracts-hero">
+        <div>
+          <div class="contracts-hero-title">
+            <span>💻 Aether Smart Contract Studio (주권 탈중앙화 프로그램 실행기)</span>
+          </div>
+          <div class="contracts-hero-desc">
+            복잡한 외부 컴파일러 없이 내 컴퓨터의 풀 노드에서 직접 배포하고 64-Shard Block-STM 병렬 엔진으로 즉시 실행되는 스마트 계약 환경입니다.
+          </div>
+        </div>
+        <div class="contracts-badges">
+          <span class="c-badge">⚡ Block-STM 병렬 실행</span>
+          <span class="c-badge">🛡️ Anti-MEV 멤풀 보호</span>
+          <span class="c-badge">💾 Lock-Free MVCC 스토리지</span>
+        </div>
+      </div>
+
+      <!-- Main Studio Grid -->
+      <div class="contracts-layout">
+        <!-- Left Column: Deploy & Call -->
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+
+          <!-- Card 1: Deploy Contract -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <span>🚀 스마트 계약 즉시 배포 (Deploy Contract)</span>
+              </div>
+              <span style="font-size: 0.75rem; color: var(--accent-cyan);">Zero-Config 원클릭 배포</span>
+            </div>
+
+            <form id="deploy-form" onsubmit="return false;" style="display: flex; flex-direction: column; gap: 0.75rem;">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>프로그램 템플릿 (Template)</label>
+                  <select class="form-input" id="deploy-template">
+                    <option value="counter">🔢 Counter (카운터 - 누적/계측기)</option>
+                    <option value="token">🪙 Token (자체 토큰 공급량 & 전송)</option>
+                    <option value="vault">🏦 DeFi Vault (자산 예치 & 복리 금고)</option>
+                    <option value="custom">⚙️ Custom Program (커스텀 데이터 슬롯)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>계약 이름 (Contract Name)</label>
+                  <input type="text" class="form-input" id="deploy-name" value="MyDappContract">
+                </div>
+              </div>
+
+              <div class="form-group" id="group-deploy-param">
+                <label id="label-deploy-param">초기 카운트 값 (Initial Value)</label>
+                <input type="text" class="form-input" id="deploy-param" value="10">
+                <span style="font-size: 0.7rem; color: var(--text-muted);" id="desc-deploy-param">배포 즉시 Slot[0]에 기록될 초기 정수 값입니다.</span>
+              </div>
+
+              <button class="btn" id="btn-deploy-contract" style="width: 100%; justify-content: center; background: linear-gradient(135deg, #0284c7, #10b981);">
+                🚀 내 로컬 노드에 스마트 계약 즉시 배포 (Deploy)
+              </button>
+            </form>
+          </div>
+
+          <!-- Card 2: Call Contract Method -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <span>⚡ 스마트 계약 함수 실행 (Call Method)</span>
+              </div>
+              <span style="font-size: 0.75rem; color: var(--accent-green);">실시간 상태 전이</span>
+            </div>
+
+            <form id="call-form" onsubmit="return false;" style="display: flex; flex-direction: column; gap: 0.75rem;">
+              <div class="form-group">
+                <label>대상 스마트 계약 (Target Contract)</label>
+                <select class="form-input" id="call-contract-select">
+                  <!-- Populated dynamically -->
+                </select>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>실행할 함수 (Method)</label>
+                  <select class="form-input" id="call-method-select">
+                    <!-- Populated dynamically based on template -->
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label id="label-call-args">인자 (Arguments)</label>
+                  <input type="text" class="form-input" id="call-args" value="5">
+                </div>
+              </div>
+              <span style="font-size: 0.7rem; color: var(--text-muted);" id="desc-call-args">호출 파라미터를 입력하세요.</span>
+
+              <button class="btn" id="btn-call-contract" style="width: 100%; justify-content: center;">
+                ⚡ 함수 호출 트랜잭션 전송 (Execute)
+              </button>
+            </form>
+
+            <!-- Execution Logs Console -->
+            <div style="margin-top: 0.5rem;">
+              <label style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem; display: block;">실시간 실행 로그 (Execution Output):</label>
+              <div class="log-box" id="contract-console-log">Ready. Deploy a contract or call a method to observe state transitions.</div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right Column: Deployed Contracts & Live Storage Slots -->
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+
+          <!-- Card 3: Deployed Contracts List -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <span>📦 활성화된 스마트 계약 목록 (Active Contracts)</span>
+              </div>
+              <button class="btn btn-secondary" id="btn-refresh-contracts" style="font-size: 0.75rem; padding: 0.2rem 0.5rem;">
+                🔄 새로고침
+              </button>
+            </div>
+
+            <div id="contract-list" style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 220px; overflow-y: auto;">
+              <!-- Contract items rendered here -->
+            </div>
+          </div>
+
+          <!-- Card 4: Live Storage Slots Inspector -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <span>🔍 실시간 스토리지 슬롯 인스펙터 (Live Storage Slots)</span>
+              </div>
+              <span id="inspecting-contract-badge" class="contract-tag tag-counter">GenesisCounter</span>
+            </div>
+
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.75rem; display: flex; justify-content: space-between;">
+              <span>계약 주소: <code id="inspecting-contract-addr" style="color: var(--accent-cyan); font-family: monospace;">0x...</code></span>
+              <span>배포 라운드: <b id="inspecting-contract-round" style="color: #fff;">0</b></span>
+            </div>
+
+            <div style="max-height: 250px; overflow-y: auto; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px;">
+              <table class="slot-table">
+                <thead>
+                  <tr>
+                    <th>슬롯 (Slot)</th>
+                    <th>상태 변수 의미</th>
+                    <th style="text-align: right;">현재 저장된 값</th>
+                  </tr>
+                </thead>
+                <tbody id="slot-table-body">
+                  <!-- Slots rendered dynamically -->
+                </tbody>
+              </table>
+            </div>
+
+            <p style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.5rem;">
+              💡 스마트 계약 함수를 호출하면 위 슬롯의 값이 <b>Block-STM 병렬 엔진에 의해 실시간으로 갱신</b>됩니다.
+            </p>
+          </div>
+
+        </div>
+      </div>
+    </section>
   </main>
 
   <footer>
@@ -736,28 +1041,33 @@
     // Mode Switching
     const simpleView = document.getElementById('simple-view');
     const proView = document.getElementById('pro-view');
+    const contractsView = document.getElementById('contracts-view');
     const btnModeSimple = document.getElementById('btn-mode-simple');
     const btnModePro = document.getElementById('btn-mode-pro');
+    const btnModeContracts = document.getElementById('btn-mode-contracts');
 
     function setMode(mode) {
-      if (mode === 'simple') {
-        simpleView.style.display = 'flex';
-        proView.style.display = 'none';
-        btnModeSimple.classList.add('active');
-        btnModePro.classList.remove('active');
-      } else {
-        simpleView.style.display = 'none';
-        proView.style.display = 'flex';
-        btnModeSimple.classList.remove('active');
-        btnModePro.classList.add('active');
+      simpleView.style.display = mode === 'simple' ? 'flex' : 'none';
+      proView.style.display = mode === 'pro' ? 'flex' : 'none';
+      contractsView.style.display = mode === 'contracts' ? 'flex' : 'none';
+
+      btnModeSimple.classList.toggle('active', mode === 'simple');
+      btnModePro.classList.toggle('active', mode === 'pro');
+      btnModeContracts.classList.toggle('active', mode === 'contracts');
+
+      if (mode === 'pro') {
         resizeCanvas();
         renderDAG();
+      } else if (mode === 'contracts') {
+        fetchContracts();
       }
     }
 
     btnModeSimple.addEventListener('click', () => setMode('simple'));
     btnModePro.addEventListener('click', () => setMode('pro'));
+    btnModeContracts.addEventListener('click', () => setMode('contracts'));
     document.getElementById('btn-goto-pro').addEventListener('click', () => setMode('pro'));
+    document.getElementById('btn-goto-contracts').addEventListener('click', () => setMode('contracts'));
     document.getElementById('btn-quick-claim').addEventListener('click', () => {
       setMode('pro');
       document.getElementById('tx-amount').focus();
@@ -910,6 +1220,8 @@
       await fetchStatus();
       if (proView.style.display !== 'none') {
         await renderDAG();
+      } else if (contractsView.style.display !== 'none') {
+        await fetchContracts();
       }
       setTimeout(() => updateCoreMeters(false), 400);
     }
@@ -971,8 +1283,297 @@
       updateCoreMeters(false);
     });
 
+    // =========================================================================
+    // Smart Contract Studio Controller
+    // =========================================================================
+    let deployedContracts = [];
+    let activeContractAddress = null;
+    let prevSlotsMap = {};
+
+    const contractListEl = document.getElementById('contract-list');
+    const slotTableBody = document.getElementById('slot-table-body');
+    const callContractSelect = document.getElementById('call-contract-select');
+    const callMethodSelect = document.getElementById('call-method-select');
+    const callArgsInput = document.getElementById('call-args');
+    const labelCallArgs = document.getElementById('label-call-args');
+    const descCallArgs = document.getElementById('desc-call-args');
+    const contractConsoleLog = document.getElementById('contract-console-log');
+    const deployTemplateSelect = document.getElementById('deploy-template');
+    const deployParamInput = document.getElementById('deploy-param');
+    const labelDeployParam = document.getElementById('label-deploy-param');
+    const descDeployParam = document.getElementById('desc-deploy-param');
+    const inspectingBadge = document.getElementById('inspecting-contract-badge');
+    const inspectingAddr = document.getElementById('inspecting-contract-addr');
+    const inspectingRound = document.getElementById('inspecting-contract-round');
+
+    // 1. Template change logic for Deploy
+    deployTemplateSelect.addEventListener('change', () => {
+      const tmpl = deployTemplateSelect.value;
+      if (tmpl === 'counter') {
+        labelDeployParam.innerText = '초기 카운트 값 (Initial Value)';
+        deployParamInput.value = '10';
+        descDeployParam.innerText = '배포 즉시 Slot[0]에 기록될 초기 정수 값입니다.';
+      } else if (tmpl === 'token') {
+        labelDeployParam.innerText = '총 발행량 (Total Supply)';
+        deployParamInput.value = '1000000';
+        descDeployParam.innerText = '배포자 주소로 발행될 초기 토큰 수량입니다.';
+      } else if (tmpl === 'vault') {
+        labelDeployParam.innerText = '연이율 APY % (Interest Rate)';
+        deployParamInput.value = '5';
+        descDeployParam.innerText = '볼트의 기본 APY(%) 이자율입니다. (Slot[2])';
+      } else {
+        labelDeployParam.innerText = '초기 슬롯 값 (쉼표 구분)';
+        deployParamInput.value = '100, 200, 300';
+        descDeployParam.innerText = 'Slot[0], Slot[1], Slot[2] 등에 순서대로 기록됩니다.';
+      }
+    });
+
+    // 2. Fetch Contracts
+    async function fetchContracts() {
+      try {
+        const res = await fetch('/api/contracts');
+        const data = await res.json();
+        deployedContracts = data.contracts || [];
+
+        renderContractList();
+        renderContractSelectDropdown();
+
+        if (deployedContracts.length > 0) {
+          const currentExists = deployedContracts.some(c => c.address === activeContractAddress);
+          if (!activeContractAddress || !currentExists) {
+            selectContract(deployedContracts[0].address);
+          } else {
+            renderStorageSlots(activeContractAddress);
+          }
+        }
+      } catch (e) {
+        console.error("contracts fetch error", e);
+      }
+    }
+
+    // 3. Render Contract List in UI
+    function renderContractList() {
+      contractListEl.innerHTML = '';
+      deployedContracts.forEach(c => {
+        const item = document.createElement('div');
+        const isActive = c.address === activeContractAddress;
+        item.className = `contract-item ${isActive ? 'active' : ''}`;
+        item.onclick = () => selectContract(c.address);
+
+        let tagClass = 'tag-counter';
+        if (c.template === 'token') tagClass = 'tag-token';
+        else if (c.template === 'vault') tagClass = 'tag-vault';
+        else if (c.template === 'custom') tagClass = 'tag-custom';
+
+        item.innerHTML = `
+          <div>
+            <div style="font-weight: 600; font-size: 0.85rem; color: #fff; display: flex; align-items: center; gap: 0.4rem;">
+              <span>${c.name}</span>
+              <span class="contract-tag ${tagClass}">${c.template}</span>
+            </div>
+            <div style="font-family: monospace; font-size: 0.72rem; color: var(--accent-cyan); margin-top: 0.2rem;">
+              ${c.address}
+            </div>
+          </div>
+          <div style="font-size: 0.7rem; color: var(--text-muted); text-align: right;">
+            Round #${c.created_at_round}
+          </div>
+        `;
+        contractListEl.appendChild(item);
+      });
+    }
+
+    // 4. Render Target Contract Select Dropdown
+    function renderContractSelectDropdown() {
+      callContractSelect.innerHTML = '';
+      deployedContracts.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.address;
+        opt.innerText = `${c.name} (${c.template.toUpperCase()}) - ${c.address.slice(0, 10)}...`;
+        if (c.address === activeContractAddress) {
+          opt.selected = true;
+        }
+        callContractSelect.appendChild(opt);
+      });
+    }
+
+    // 5. Select Active Contract
+    function selectContract(addr) {
+      activeContractAddress = addr;
+      callContractSelect.value = addr;
+      renderContractList();
+      updateMethodDropdown();
+      renderStorageSlots(addr);
+    }
+
+    callContractSelect.addEventListener('change', () => {
+      selectContract(callContractSelect.value);
+    });
+
+    // 6. Update Method Dropdown based on active contract template
+    function updateMethodDropdown() {
+      const c = deployedContracts.find(x => x.address === activeContractAddress);
+      callMethodSelect.innerHTML = '';
+      if (!c) return;
+
+      const methodsMap = {
+        counter: [
+          { val: 'increment', text: 'increment(step) - 값 증가', argLabel: '증가할 값 (step)', argVal: '5', desc: '현재 카운터에 지정된 값만큼 더합니다.' },
+          { val: 'decrement', text: 'decrement(step) - 값 감소', argLabel: '감소할 값 (step)', argVal: '2', desc: '현재 카운터에서 지정된 값만큼 뺍니다.' },
+          { val: 'set', text: 'set(val) - 값 직접 설정', argLabel: '새로운 값 (value)', argVal: '100', desc: '카운터를 지정한 값으로 강제 설정합니다.' }
+        ],
+        token: [
+          { val: 'mint', text: 'mint(to, amount) - 토큰 신규 발행', argLabel: '수신자 ID, 수량 (쉼표 구분)', argVal: '102, 500', desc: '대상 계정으로 신규 토큰을 발행하고 총공급량을 증가시킵니다.' },
+          { val: 'transfer', text: 'transfer(to, amount) - 토큰 전송', argLabel: '수신자 ID, 수량 (쉼표 구분)', argVal: '102, 100', desc: '발행자 잔고에서 대상 계정으로 토큰을 전송합니다.' }
+        ],
+        vault: [
+          { val: 'deposit', text: 'deposit(amount) - 자산 예치 & 지분 수령', argLabel: '예치 수량 (AETH)', argVal: '100', desc: 'AETH를 금고에 예치하고 지분(Shares)을 발급받습니다.' },
+          { val: 'compound', text: 'compound() - 연이율 이자 복리 정산', argLabel: '인자 없음 (빈칸)', argVal: '', desc: '설정된 APY에 따라 자산 수익을 정산하여 볼트에 복리 반영합니다.' }
+        ],
+        custom: [
+          { val: 'set_slot', text: 'set_slot(slot, val) - 슬롯 쓰기', argLabel: '슬롯 번호, 저장할 값 (쉼표 구분)', argVal: '5, 8888', desc: '지정한 스토리지 슬롯에 임의의 값을 직접 기록합니다.' }
+        ]
+      };
+
+      const methods = methodsMap[c.template] || methodsMap.custom;
+      methods.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.val;
+        opt.innerText = m.text;
+        callMethodSelect.appendChild(opt);
+      });
+
+      const onMethodChange = () => {
+        const selectedM = methods.find(m => m.val === callMethodSelect.value) || methods[0];
+        labelCallArgs.innerText = selectedM.argLabel;
+        callArgsInput.value = selectedM.argVal;
+        descCallArgs.innerText = selectedM.desc;
+      };
+
+      callMethodSelect.onchange = onMethodChange;
+      onMethodChange();
+    }
+
+    // 7. Render Storage Slots Table
+    function renderStorageSlots(addr) {
+      const c = deployedContracts.find(x => x.address === addr);
+      if (!c) return;
+
+      inspectingBadge.innerText = `${c.name} (${c.template.toUpperCase()})`;
+      inspectingBadge.className = `contract-tag tag-${c.template}`;
+      inspectingAddr.innerText = c.address;
+      inspectingRound.innerText = c.created_at_round;
+
+      const slots = c.slots || {};
+      slotTableBody.innerHTML = '';
+
+      const slotKeys = Object.keys(slots).map(Number).sort((a, b) => a - b);
+      if (slotKeys.length === 0) {
+        slotTableBody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 1rem;">저장된 스토리지 슬롯이 없습니다.</td></tr>`;
+        return;
+      }
+
+      slotKeys.forEach(k => {
+        const val = slots[k];
+        const prevVal = prevSlotsMap[`${addr}:${k}`];
+        const isChanged = prevVal !== undefined && prevVal !== val;
+        prevSlotsMap[`${addr}:${k}`] = val;
+
+        let desc = `Custom State Slot[${k}]`;
+        if (c.template === 'counter' && k === 0) desc = '🔢 Counter Current Value (누적 카운트)';
+        else if (c.template === 'token' && k === 0) desc = '🪙 Total Token Supply (총 공급량)';
+        else if (c.template === 'token' && k >= 100) desc = `👤 Account #${k - 100} Token Balance`;
+        else if (c.template === 'vault' && k === 0) desc = '🏦 Total Staked Assets (예치된 총 자산)';
+        else if (c.template === 'vault' && k === 1) desc = '🎫 Total Shares Minted (발행된 총 지분)';
+        else if (c.template === 'vault' && k === 2) desc = '📈 APY Interest Rate % (연이율)';
+        else if (c.template === 'vault' && k >= 100) desc = `👤 User #${k - 100} Vault Shares (보유 지분)`;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><span style="color: var(--accent-cyan);">Slot[${k}]</span></td>
+          <td style="color: var(--text-muted); font-size: 0.8rem;">${desc}</td>
+          <td style="text-align: right;">
+            <span class="slot-val-pill ${isChanged ? 'glow' : ''}">${val.toLocaleString()}</span>
+          </td>
+        `;
+        slotTableBody.appendChild(tr);
+      });
+    }
+
+    // 8. Deploy Contract Action
+    document.getElementById('btn-deploy-contract').addEventListener('click', async () => {
+      const name = document.getElementById('deploy-name').value.trim() || 'MyContract';
+      const template = deployTemplateSelect.value;
+      const paramRaw = deployParamInput.value.trim();
+      const params = paramRaw.split(',').map(x => parseInt(x.trim())).filter(x => !isNaN(x));
+
+      const log = (msg) => {
+        contractConsoleLog.innerText = `[${new Date().toLocaleTimeString()}] ${msg}\n` + contractConsoleLog.innerText;
+      };
+
+      log(`🚀 스마트 계약 배포 트랜잭션 브로드캐스트: ${name} (${template})...`);
+
+      try {
+        const res = await fetch('/api/contract/deploy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, template, params })
+        });
+        const data = await res.json();
+        if (data.contract_address) {
+          log(`✔ 계약 배포 성공! 주소: ${data.contract_address} (완결 라운드: R${data.round})`);
+          await fetchContracts();
+          selectContract(data.contract_address);
+          await fetchStatus();
+        } else {
+          log(`❌ 배포 실패: ${JSON.stringify(data)}`);
+        }
+      } catch (err) {
+        log(`❌ 네트워크 오류: ${err.message}`);
+      }
+    });
+
+    // 9. Call Contract Method Action
+    document.getElementById('btn-call-contract').addEventListener('click', async () => {
+      const contract = callContractSelect.value;
+      const method = callMethodSelect.value;
+      const argsRaw = callArgsInput.value.trim();
+      const args = argsRaw.length > 0
+        ? argsRaw.split(',').map(x => parseInt(x.trim())).filter(x => !isNaN(x))
+        : [];
+
+      const log = (msg) => {
+        contractConsoleLog.innerText = `[${new Date().toLocaleTimeString()}] ${msg}\n` + contractConsoleLog.innerText;
+      };
+
+      log(`⚡ 계약 함수 호출 실행: ${method}(${args.join(', ')}) -> ${contract.slice(0, 10)}...`);
+
+      try {
+        const res = await fetch('/api/contract/call', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contract, method, args })
+        });
+        const data = await res.json();
+        if (data.status === 'executed') {
+          log(`✔ 실행 완결! Block-STM 병렬 검증 통과 (라운드 R${data.round})`);
+          await fetchContracts();
+          await fetchStatus();
+        } else {
+          log(`❌ 실행 오류: ${JSON.stringify(data)}`);
+        }
+      } catch (err) {
+        log(`❌ 네트워크 오류: ${err.message}`);
+      }
+    });
+
+    document.getElementById('btn-refresh-contracts').addEventListener('click', () => {
+      fetchContracts();
+    });
+
     // Initial load
     fetchStatus();
+    fetchContracts();
   </script>
 </body>
 </html>

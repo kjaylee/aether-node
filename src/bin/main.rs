@@ -4,6 +4,7 @@ use aether_core::execution::{BlockSTMExecutor, SequentialExecutor};
 use aether_core::mempool::EncryptedMempool;
 use aether_core::storage::FlatStateStore;
 use aether_core::types::{Address, Hash256, Transaction, TxPayload, Vertex};
+use aether_core::vm::SmartContractEngine;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use std::time::Instant;
@@ -248,6 +249,86 @@ fn main() {
     let speedup_a = par_a_tps / seq_a_tps;
     let speedup_b = par_b_tps / seq_b_tps;
 
+    // --- Benchmark 3-C: Programmable Smart Contracts (Deploys + State Calls - 2,000 TX) ---
+    println!("\n  [워크로드 C] 프로그래머블 스마트 계약 병렬 처리 (컨트랙트 배포 & 상태 슬롯 연산 - 2,000 TX)");
+    const CONTRACT_TX_COUNT: usize = 2_000;
+    let base_store_c = FlatStateStore::new();
+    for i in 0..1000 {
+        base_store_c.deposit(Address::new(i), 1_000_000);
+    }
+
+    let mut txs_c = Vec::with_capacity(CONTRACT_TX_COUNT);
+    // 1. Deploy 50 independent contracts
+    let mut contract_addrs = Vec::new();
+    for i in 0..50 {
+        let creator = Address::new(i);
+        let name = format!("Contract_{}", i);
+        let addr = SmartContractEngine::derive_contract_address(&creator, 0, &name);
+        contract_addrs.push(addr);
+        txs_c.push(Transaction {
+            id: i as u64,
+            sender: creator,
+            nonce: 0,
+            payload: TxPayload::DeployContract {
+                name,
+                template: if i % 2 == 0 { "token".to_string() } else { "counter".to_string() },
+                params: vec![1_000_000],
+            },
+            gas_limit: 50000,
+        });
+    }
+
+    // 2. 1,950 Contract Calls across the 50 contracts
+    for i in 50..CONTRACT_TX_COUNT {
+        let contract_idx = (i % 50) as usize;
+        let contract = contract_addrs[contract_idx];
+        let sender = Address::new((i % 1000) as u64);
+        let is_token = contract_idx % 2 == 0;
+        let payload = if is_token {
+            TxPayload::CallContract {
+                contract,
+                method: "mint".to_string(),
+                args: vec![(i % 500) as u64, 10],
+            }
+        } else {
+            TxPayload::CallContract {
+                contract,
+                method: "increment".to_string(),
+                args: vec![1],
+            }
+        };
+
+        txs_c.push(Transaction {
+            id: i as u64,
+            sender,
+            nonce: (i / 1000) as u64,
+            payload,
+            gas_limit: 30000,
+        });
+    }
+
+    print!("    └─ 전통적 직렬 EVM (1스레드)... ");
+    let seq_c_start = Instant::now();
+    let seq_c_store = SequentialExecutor::execute_block(&txs_c, &base_store_c);
+    let seq_c_dur = seq_c_start.elapsed();
+    let seq_c_tps = (CONTRACT_TX_COUNT as f64) / seq_c_dur.as_secs_f64();
+    println!("소요 시간: \x1b[1;31m{:.2?}\x1b[0m, TPS: \x1b[1;31m{:.0} TX/s\x1b[0m", seq_c_dur, seq_c_tps);
+
+    print!("    └─ 차세대 Block-STM ({}코어 병렬)... ", num_cpus);
+    let par_c_start = Instant::now();
+    let (par_c_store, aborts_c) = BlockSTMExecutor::execute_block(&txs_c, &base_store_c);
+    let par_c_dur = par_c_start.elapsed();
+    let par_c_tps = (CONTRACT_TX_COUNT as f64) / par_c_dur.as_secs_f64();
+    println!(
+        "소요 시간: \x1b[1;32m{:.2?}\x1b[0m, TPS: \x1b[1;32m{:.0} TX/s\x1b[0m (경합 재실행: {} 회)",
+        par_c_dur, par_c_tps, aborts_c
+    );
+
+    assert_eq!(seq_c_store.state_root(), par_c_store.state_root());
+    println!("    └─ \x1b[1;32m✔ 스마트 계약 상태 무결성 일치 검증 통과\x1b[0m: State Root = {}", par_c_store.state_root());
+
+    let speedup_c = par_c_tps / seq_c_tps;
+
     println!("\n\x1b[1;36m================================================================================\x1b[0m");
     println!("\x1b[1;36m                           최종 실측 벤치마크 분석 보고서                        \x1b[0m");
     println!("\x1b[1;36m================================================================================\x1b[0m");
@@ -255,6 +336,7 @@ fn main() {
     println!(" |-----------------------|-----------------------|-----------------------------|");
     println!(" | 워크로드 A (저경합)   | {:>13.0} TX/s | \x1b[1;32m{:>19.0} TX/s\x1b[0m ({:.2}x 향상)|", seq_a_tps, par_a_tps, speedup_a);
     println!(" | 워크로드 B (고경합)   | {:>13.0} TX/s | \x1b[1;32m{:>19.0} TX/s\x1b[0m ({:.2}x 향상)|", seq_b_tps, par_b_tps, speedup_b);
+    println!(" | 워크로드 C (스마트계약)|{:>13.0} TX/s | \x1b[1;32m{:>19.0} TX/s\x1b[0m ({:.2}x 향상)|", seq_c_tps, par_c_tps, speedup_c);
     println!(" | 합의 최종성 지연      | 수초 ~ 수분           | \x1b[1;32m< 500ms (비동기 DAG-BFT)\x1b[0m    |");
     println!(" | MEV 샌드위치 공격     | 100% 취약 (평문 멤풀) | \x1b[1;32m0% (임계치 암호화 멤풀 방어)\x1b[0m|");
     println!(" | 상태 정합성 검증      | 완전 일치             | \x1b[1;32m완전 일치 (Zero Error)\x1b[0m      |");

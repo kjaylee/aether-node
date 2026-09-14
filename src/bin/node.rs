@@ -4,6 +4,7 @@ use aether_core::execution::{BlockSTMExecutor, SequentialExecutor};
 use aether_core::mempool::EncryptedMempool;
 use aether_core::storage::FlatStateStore;
 use aether_core::types::{Address, Hash256, Transaction, TxPayload, Vertex};
+use aether_core::vm::SmartContractEngine;
 use parking_lot::RwLock;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
@@ -55,6 +56,26 @@ impl NodeState {
         // Deposit initial balance to my validator
         store.deposit(Address::new(101), 1_000_000);
         store.deposit(Address::new(102), 500_000);
+
+        // Pre-deploy 3 Genesis Smart Contracts for immediate interactivity
+        let genesis_creator = Address::new(101);
+        let (c1, s1) = SmartContractEngine::deploy(genesis_creator, 0, 0, "GenesisCounter", "counter", &[42]);
+        store.register_contract(c1.clone());
+        for (slot, val) in s1 {
+            store.set_contract_slot(c1.address, slot, val);
+        }
+
+        let (c2, s2) = SmartContractEngine::deploy(genesis_creator, 1, 0, "AetherCommunityToken", "token", &[1_000_000]);
+        store.register_contract(c2.clone());
+        for (slot, val) in s2 {
+            store.set_contract_slot(c2.address, slot, val);
+        }
+
+        let (c3, s3) = SmartContractEngine::deploy(genesis_creator, 2, 0, "HighYieldVault", "vault", &[5]);
+        store.register_contract(c3.clone());
+        for (slot, val) in s3 {
+            store.set_contract_slot(c3.address, slot, val);
+        }
 
         let mut state = NodeState {
             my_address: Address::new(101),
@@ -123,10 +144,8 @@ impl NodeState {
                 is_anchor,
             });
 
-            // If anchor commits, decrypt and execute
-            if is_anchor {
-                round_txs.extend(txs);
-            }
+            // Anchor orders and commits all vertices in the round!
+            round_txs.extend(txs);
         }
 
         self.round_parents = current_hashes;
@@ -154,7 +173,7 @@ impl NodeState {
 }
 
 fn handle_connection(mut stream: TcpStream, state: Arc<RwLock<NodeState>>) {
-    let mut buffer = [0u8; 4096];
+    let mut buffer = [0u8; 16384];
     let n = match stream.read(&mut buffer) {
         Ok(n) if n > 0 => n,
         _ => return,
@@ -223,6 +242,125 @@ fn handle_connection(mut stream: TcpStream, state: Arc<RwLock<NodeState>>) {
             ciphertext
         );
         send_json(&mut stream, &json);
+        return;
+    }
+
+    if method == "GET" && path == "/api/contracts" {
+        let s = state.read();
+        let contracts = s.store.list_contracts();
+        let mut list = Vec::new();
+        for c in contracts {
+            let slots = s.store.get_all_contract_slots(&c.address);
+            let slots_json: serde_json::Map<String, serde_json::Value> = slots
+                .into_iter()
+                .map(|(k, v)| (k.to_string(), serde_json::Value::from(v)))
+                .collect();
+
+            list.push(serde_json::json!({
+                "address": c.address.to_hex(),
+                "name": c.name,
+                "template": c.template,
+                "creator": c.creator.to_hex(),
+                "created_at_round": c.created_at_round,
+                "slots": slots_json,
+            }));
+        }
+        let json = serde_json::json!({ "contracts": list });
+        send_json(&mut stream, &json.to_string());
+        return;
+    }
+
+    if method == "POST" && path == "/api/contract/deploy" {
+        if let Some(body_start) = request.find("\r\n\r\n") {
+            let body = &request[body_start + 4..];
+            if let Ok(val) = serde_json::from_str::<serde_json::Value>(body) {
+                let name = val["name"].as_str().unwrap_or("CustomContract").to_string();
+                let template = val["template"].as_str().unwrap_or("counter").to_string();
+                let params: Vec<u64> = val["params"]
+                    .as_array()
+                    .map(|arr| arr.iter().filter_map(|x| x.as_u64()).collect())
+                    .unwrap_or_default();
+
+                let (contract_addr, round) = {
+                    let mut s = state.write();
+                    let sender_nonce = s.store.get_account(&s.my_address).nonce;
+                    let addr = SmartContractEngine::derive_contract_address(&s.my_address, sender_nonce, &name);
+                    let tx = Transaction {
+                        id: s.total_txs as u64 + 1000,
+                        sender: s.my_address,
+                        nonce: sender_nonce,
+                        payload: TxPayload::DeployContract {
+                            name: name.clone(),
+                            template: template.clone(),
+                            params,
+                        },
+                        gas_limit: 100_000,
+                    };
+                    let enc = s.scheme.encrypt(&tx);
+                    s.mempool.submit(enc);
+                    s.advance_round();
+                    (addr, s.round)
+                };
+
+                let resp = serde_json::json!({
+                    "status": "deployed",
+                    "contract_address": contract_addr.to_hex(),
+                    "name": name,
+                    "template": template,
+                    "round": round,
+                });
+                send_json(&mut stream, &resp.to_string());
+                return;
+            }
+        }
+        send_json(&mut stream, r#"{"error":"invalid_payload"}"#);
+        return;
+    }
+
+    if method == "POST" && path == "/api/contract/call" {
+        if let Some(body_start) = request.find("\r\n\r\n") {
+            let body = &request[body_start + 4..];
+            if let Ok(val) = serde_json::from_str::<serde_json::Value>(body) {
+                let contract_str = val["contract"].as_str().unwrap_or("");
+                let method_name = val["method"].as_str().unwrap_or("").to_string();
+                let args: Vec<u64> = val["args"]
+                    .as_array()
+                    .map(|arr| arr.iter().filter_map(|x| x.as_u64()).collect())
+                    .unwrap_or_default();
+
+                if let Some(target_contract) = Address::from_hex(contract_str) {
+                    let round = {
+                        let mut s = state.write();
+                        let sender_nonce = s.store.get_account(&s.my_address).nonce;
+                        let tx = Transaction {
+                            id: s.total_txs as u64 + 1000,
+                            sender: s.my_address,
+                            nonce: sender_nonce,
+                            payload: TxPayload::CallContract {
+                                contract: target_contract,
+                                method: method_name.clone(),
+                                args,
+                            },
+                            gas_limit: 50_000,
+                        };
+                        let enc = s.scheme.encrypt(&tx);
+                        s.mempool.submit(enc);
+                        s.advance_round();
+                        s.round
+                    };
+
+                    let resp = serde_json::json!({
+                        "status": "executed",
+                        "contract": contract_str,
+                        "method": method_name,
+                        "round": round,
+                    });
+                    send_json(&mut stream, &resp.to_string());
+                    return;
+                }
+            }
+        }
+        send_json(&mut stream, r#"{"error":"invalid_payload"}"#);
         return;
     }
 

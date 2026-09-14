@@ -1,4 +1,4 @@
-use crate::types::{AccountState, Address, Hash256};
+use crate::types::{AccountState, Address, ContractInfo, Hash256};
 use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -7,6 +7,8 @@ use std::sync::Arc;
 pub struct FlatStateStore {
     accounts: Arc<RwLock<HashMap<Address, AccountState>>>,
     storage_slots: Arc<RwLock<HashMap<(Address, Hash256), u64>>>,
+    contracts: Arc<RwLock<HashMap<Address, ContractInfo>>>,
+    contract_slots: Arc<RwLock<HashMap<(Address, u64), u64>>>,
 }
 
 impl FlatStateStore {
@@ -14,6 +16,8 @@ impl FlatStateStore {
         FlatStateStore {
             accounts: Arc::new(RwLock::new(HashMap::new())),
             storage_slots: Arc::new(RwLock::new(HashMap::new())),
+            contracts: Arc::new(RwLock::new(HashMap::new())),
+            contract_slots: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -43,7 +47,45 @@ impl FlatStateStore {
         self.storage_slots.write().insert((addr, slot), val);
     }
 
-    pub fn apply_batch(&self, account_writes: HashMap<Address, AccountState>, slot_writes: HashMap<(Address, Hash256), u64>) {
+    // Smart Contracts Support
+    pub fn register_contract(&self, info: ContractInfo) {
+        self.contracts.write().insert(info.address, info);
+    }
+
+    pub fn get_contract(&self, addr: &Address) -> Option<ContractInfo> {
+        self.contracts.read().get(addr).cloned()
+    }
+
+    pub fn list_contracts(&self) -> Vec<ContractInfo> {
+        self.contracts.read().values().cloned().collect()
+    }
+
+    pub fn get_contract_slot(&self, addr: &Address, slot: u64) -> u64 {
+        self.contract_slots.read().get(&(*addr, slot)).cloned().unwrap_or(0)
+    }
+
+    pub fn set_contract_slot(&self, addr: Address, slot: u64, val: u64) {
+        self.contract_slots.write().insert((addr, slot), val);
+    }
+
+    pub fn get_all_contract_slots(&self, addr: &Address) -> HashMap<u64, u64> {
+        let r = self.contract_slots.read();
+        let mut map = HashMap::new();
+        for ((c_addr, slot), val) in r.iter() {
+            if c_addr == addr {
+                map.insert(*slot, *val);
+            }
+        }
+        map
+    }
+
+    pub fn apply_batch(
+        &self,
+        account_writes: HashMap<Address, AccountState>,
+        slot_writes: HashMap<(Address, Hash256), u64>,
+        new_contracts: Vec<ContractInfo>,
+        contract_slot_writes: HashMap<(Address, u64), u64>,
+    ) {
         let mut acc_w = self.accounts.write();
         for (addr, state) in account_writes {
             acc_w.insert(addr, state);
@@ -52,6 +94,16 @@ impl FlatStateStore {
         let mut slot_w = self.storage_slots.write();
         for (k, v) in slot_writes {
             slot_w.insert(k, v);
+        }
+
+        let mut c_w = self.contracts.write();
+        for c in new_contracts {
+            c_w.insert(c.address, c);
+        }
+
+        let mut cs_w = self.contract_slots.write();
+        for (k, v) in contract_slot_writes {
+            cs_w.insert(k, v);
         }
     }
 
@@ -67,6 +119,16 @@ impl FlatStateStore {
             bytes.extend_from_slice(&state.balance.to_be_bytes());
             bytes.extend_from_slice(&state.nonce.to_be_bytes());
         }
+
+        let cs = self.contract_slots.read();
+        let mut sorted_cs: Vec<_> = cs.iter().collect();
+        sorted_cs.sort_by_key(|((addr, slot), _)| (addr.0, *slot));
+        for ((addr, slot), val) in sorted_cs {
+            bytes.extend_from_slice(&addr.0);
+            bytes.extend_from_slice(&slot.to_be_bytes());
+            bytes.extend_from_slice(&val.to_be_bytes());
+        }
+
         Hash256::of(&bytes)
     }
 }

@@ -10,6 +10,7 @@ sha2 = "0.10"
 rayon = "1.10"
 parking_lot = "0.12"
 rand = "0.8"
+revm = "43.0.2"
 
 [[bin]]
 name = "aether-bench"

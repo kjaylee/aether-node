@@ -1,8 +1,9 @@
 use crate::storage::FlatStateStore;
-use crate::types::{AccountState, Address, Hash256, Transaction, TxPayload};
-use sha2::Digest;
+use crate::types::{AccountState, Address, ContractInfo, Hash256, Transaction, TxPayload};
+use crate::vm::SmartContractEngine;
 use parking_lot::RwLock;
 use rayon::prelude::*;
+use sha2::Digest;
 use std::collections::{BTreeMap, HashMap};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -11,12 +12,16 @@ use std::sync::Arc;
 pub enum StateKey {
     Account(Address),
     Pool(u64),
+    ContractMeta(Address),
+    ContractSlot(Address, u64),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum StateValue {
     Account(AccountState),
     Pool { reserve_a: u64, reserve_b: u64 },
+    ContractMeta(Option<ContractInfo>),
+    ContractSlot(u64),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -70,6 +75,12 @@ impl MVMemory {
                     reserve_a: if reserve_a == 0 { 10_000_000 } else { reserve_a },
                     reserve_b: if reserve_b == 0 { 10_000_000 } else { reserve_b },
                 }
+            }
+            StateKey::ContractMeta(addr) => {
+                StateValue::ContractMeta(self.base_store.get_contract(addr))
+            }
+            StateKey::ContractSlot(addr, slot) => {
+                StateValue::ContractSlot(self.base_store.get_contract_slot(addr, *slot))
             }
         };
         (val, TxVersion::Storage)
@@ -128,7 +139,7 @@ fn execute_tx_logic(
                 _ => AccountState::default(),
             };
 
-            // Simulate EVM bytecode interpretation, gas metering, and signature verification (~30-50us)
+            // Simulate EVM bytecode interpretation & gas metering (~30us)
             let mut hash_acc = [0u8; 32];
             hash_acc[..8].copy_from_slice(&tx.id.to_be_bytes());
             for _ in 0..60 {
@@ -161,7 +172,6 @@ fn execute_tx_logic(
                 _ => (10_000_000, 10_000_000),
             };
 
-            // Simulate AMM contract execution, curve math, and pool storage updates (~30-50us)
             let mut hash_acc = [0u8; 32];
             hash_acc[..8].copy_from_slice(&pool_id.to_be_bytes());
             for _ in 0..60 {
@@ -171,7 +181,6 @@ fn execute_tx_logic(
                 hash_acc.copy_from_slice(&hasher.finalize());
             }
 
-            // Constant Product AMM: (x + dx)(y - dy) = k => dy = y * dx / (x + dx)
             let dy = (res_b * amount_in) / (res_a + amount_in);
             if sender_acc.balance >= *amount_in && dy >= *min_out {
                 sender_acc.balance -= amount_in;
@@ -181,6 +190,47 @@ fn execute_tx_logic(
 
                 write_set.insert(sender_key, StateValue::Account(sender_acc));
                 write_set.insert(pool_key, StateValue::Pool { reserve_a: res_a, reserve_b: res_b });
+            }
+        }
+        TxPayload::DeployContract { name, template, params } => {
+            let (info, initial_slots) = SmartContractEngine::deploy(
+                tx.sender,
+                sender_acc.nonce,
+                0,
+                name,
+                template,
+                params,
+            );
+            sender_acc.nonce += 1;
+
+            write_set.insert(sender_key, StateValue::Account(sender_acc));
+            write_set.insert(StateKey::ContractMeta(info.address), StateValue::ContractMeta(Some(info.clone())));
+            for (slot, val) in initial_slots {
+                write_set.insert(StateKey::ContractSlot(info.address, slot), StateValue::ContractSlot(val));
+            }
+        }
+        TxPayload::CallContract { contract, method, args } => {
+            let meta_key = StateKey::ContractMeta(*contract);
+            let (meta_val, meta_ver) = mv.read(&meta_key, tx_idx);
+            read_set.insert(meta_key, meta_ver);
+
+            if let StateValue::ContractMeta(Some(info)) = meta_val {
+                sender_acc.nonce += 1;
+                write_set.insert(sender_key, StateValue::Account(sender_acc));
+
+                let read_slot_fn = |slot: u64| -> u64 {
+                    let slot_key = StateKey::ContractSlot(*contract, slot);
+                    let (val, _) = mv.read(&slot_key, tx_idx);
+                    match val {
+                        StateValue::ContractSlot(v) => v,
+                        _ => 0,
+                    }
+                };
+
+                let vm_res = SmartContractEngine::execute_call(tx.sender, &info, method, args, read_slot_fn);
+                for (slot, val) in vm_res.contract_slot_writes {
+                    write_set.insert(StateKey::ContractSlot(*contract, slot), StateValue::ContractSlot(val));
+                }
             }
         }
     }
@@ -205,12 +255,10 @@ impl BlockSTMExecutor {
         let executed: Vec<AtomicBool> = (0..n).map(|_| AtomicBool::new(false)).collect();
         let validated: Vec<AtomicBool> = (0..n).map(|_| AtomicBool::new(false)).collect();
         let abort_counts = Arc::new(AtomicUsize::new(0));
-
         let completed = AtomicBool::new(false);
 
-        // Iterative parallel execution and validation waves
         while !completed.load(Ordering::SeqCst) {
-            // Step 1: Parallel Execution of unexecuted or invalidated transactions
+            // Step 1: Parallel Execution
             (0..n).into_par_iter().for_each(|i| {
                 if !executed[i].load(Ordering::Acquire) {
                     let res = execute_tx_logic(&transactions[i], i, &mv);
@@ -221,9 +269,8 @@ impl BlockSTMExecutor {
                 }
             });
 
-            // Step 2: Parallel Validation of executed transactions
+            // Step 2: Parallel Validation
             let has_conflict = AtomicBool::new(false);
-
             (0..n).into_par_iter().for_each(|i| {
                 if executed[i].load(Ordering::Acquire) && !validated[i].load(Ordering::Acquire) {
                     let r = results[i].read();
@@ -240,7 +287,6 @@ impl BlockSTMExecutor {
                         if valid {
                             validated[i].store(true, Ordering::Release);
                         } else {
-                            // Conflict detected! Abort and mark for re-execution
                             has_conflict.store(true, Ordering::Release);
                             abort_counts.fetch_add(1, Ordering::Relaxed);
 
@@ -251,7 +297,6 @@ impl BlockSTMExecutor {
                             *results[i].write() = None;
                             executed[i].store(false, Ordering::Release);
 
-                            // Invalidate all downstream transactions that read what `i` wrote
                             for j in (i + 1)..n {
                                 if executed[j].load(Ordering::Acquire) {
                                     let r_j = results[j].read();
@@ -270,17 +315,18 @@ impl BlockSTMExecutor {
                 }
             });
 
-            // Check if all transactions are executed and validated
             let all_done = (0..n).all(|i| executed[i].load(Ordering::Acquire) && validated[i].load(Ordering::Acquire));
             if all_done && !has_conflict.load(Ordering::Acquire) {
                 completed.store(true, Ordering::SeqCst);
             }
         }
 
-        // Apply final committed writes to target store
+        // Apply final committed writes
         let final_store = base_store.clone();
         let mut account_writes = HashMap::new();
         let mut slot_writes = HashMap::new();
+        let mut new_contracts = Vec::new();
+        let mut contract_slot_writes = HashMap::new();
 
         for i in 0..n {
             let r = results[i].read();
@@ -295,13 +341,19 @@ impl BlockSTMExecutor {
                             slot_writes.insert((addr, Hash256::of(b"reserve_a")), *reserve_a);
                             slot_writes.insert((addr, Hash256::of(b"reserve_b")), *reserve_b);
                         }
+                        (StateKey::ContractMeta(_addr), StateValue::ContractMeta(Some(info))) => {
+                            new_contracts.push(info.clone());
+                        }
+                        (StateKey::ContractSlot(addr, slot), StateValue::ContractSlot(val)) => {
+                            contract_slot_writes.insert((*addr, *slot), *val);
+                        }
                         _ => {}
                     }
                 }
             }
         }
 
-        final_store.apply_batch(account_writes, slot_writes);
+        final_store.apply_batch(account_writes, slot_writes, new_contracts, contract_slot_writes);
         (final_store, abort_counts.load(Ordering::SeqCst))
     }
 }
@@ -319,7 +371,6 @@ impl SequentialExecutor {
             match &tx.payload {
                 TxPayload::Transfer { to, amount } => {
                     let mut recv = store.get_account(to);
-                    // Simulate EVM bytecode interpretation, gas metering, and signature verification (~30-50us)
                     let mut hash_acc = [0u8; 32];
                     hash_acc[..8].copy_from_slice(&tx.id.to_be_bytes());
                     for _ in 0..60 {
@@ -337,24 +388,15 @@ impl SequentialExecutor {
                         store.set_account(*to, recv);
                     }
                 }
-                TxPayload::Swap {
-                    pool_id,
-                    amount_in,
-                    min_out,
-                } => {
+                TxPayload::Swap { pool_id, amount_in, min_out } => {
                     let pool_addr = Address::new(*pool_id);
                     let slot_a = Hash256::of(b"reserve_a");
                     let slot_b = Hash256::of(b"reserve_b");
                     let mut res_a = store.get_slot(&pool_addr, &slot_a);
                     let mut res_b = store.get_slot(&pool_addr, &slot_b);
-                    if res_a == 0 {
-                        res_a = 10_000_000;
-                    }
-                    if res_b == 0 {
-                        res_b = 10_000_000;
-                    }
+                    if res_a == 0 { res_a = 10_000_000; }
+                    if res_b == 0 { res_b = 10_000_000; }
 
-                    // Simulate AMM contract execution, curve math, and pool storage updates (~30-50us)
                     let mut hash_acc = [0u8; 32];
                     hash_acc[..8].copy_from_slice(&pool_id.to_be_bytes());
                     for _ in 0..60 {
@@ -375,8 +417,94 @@ impl SequentialExecutor {
                         store.set_slot(pool_addr, slot_b, res_b);
                     }
                 }
+                TxPayload::DeployContract { name, template, params } => {
+                    let (info, initial_slots) = SmartContractEngine::deploy(
+                        tx.sender,
+                        sender.nonce,
+                        0,
+                        name,
+                        template,
+                        params,
+                    );
+                    sender.nonce += 1;
+                    store.set_account(tx.sender, sender);
+                    store.register_contract(info.clone());
+                    for (slot, val) in initial_slots {
+                        store.set_contract_slot(info.address, slot, val);
+                    }
+                }
+                TxPayload::CallContract { contract, method, args } => {
+                    if let Some(info) = store.get_contract(contract) {
+                        sender.nonce += 1;
+                        store.set_account(tx.sender, sender);
+                        let read_slot_fn = |slot: u64| store.get_contract_slot(contract, slot);
+                        let vm_res = SmartContractEngine::execute_call(tx.sender, &info, method, args, read_slot_fn);
+                        for (slot, val) in vm_res.contract_slot_writes {
+                            store.set_contract_slot(*contract, slot, val);
+                        }
+                    }
+                }
             }
         }
         store
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_block_stm_contract_execution() {
+        let base_store = FlatStateStore::new();
+        let creator = Address::new(1);
+        base_store.deposit(creator, 1_000_000);
+
+        let contract_addr = SmartContractEngine::derive_contract_address(&creator, 0, "CounterTest");
+
+        let txs = vec![
+            Transaction {
+                id: 1,
+                sender: creator,
+                nonce: 0,
+                payload: TxPayload::DeployContract {
+                    name: "CounterTest".to_string(),
+                    template: "counter".to_string(),
+                    params: vec![100],
+                },
+                gas_limit: 50000,
+            },
+            Transaction {
+                id: 2,
+                sender: creator,
+                nonce: 1,
+                payload: TxPayload::CallContract {
+                    contract: contract_addr,
+                    method: "increment".to_string(),
+                    args: vec![25],
+                },
+                gas_limit: 30000,
+            },
+            Transaction {
+                id: 3,
+                sender: creator,
+                nonce: 2,
+                payload: TxPayload::CallContract {
+                    contract: contract_addr,
+                    method: "decrement".to_string(),
+                    args: vec![10],
+                },
+                gas_limit: 30000,
+            },
+        ];
+
+        let (new_store, aborts) = BlockSTMExecutor::execute_block(&txs, &base_store);
+        let contract = new_store.get_contract(&contract_addr);
+        assert!(contract.is_some(), "Contract should be deployed");
+        let slot0 = new_store.get_contract_slot(&contract_addr, 0);
+        // 100 + 25 - 10 = 115
+        assert_eq!(slot0, 115, "Slot 0 should reflect incremental updates in serial dependency");
+        println!("Contract execution passed! Aborts: {}", aborts);
+    }
+}
+

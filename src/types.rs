@@ -12,6 +12,22 @@ impl Address {
         Address(bytes)
     }
 
+    pub fn from_hex(s: &str) -> Option<Self> {
+        let clean = s.trim_start_matches("0x");
+        if clean.len() != 40 {
+            // Try parsing as u64 short id if shorter
+            if let Ok(id) = u64::from_str_radix(clean, 16) {
+                return Some(Address::new(id));
+            }
+            return None;
+        }
+        let mut bytes = [0u8; 20];
+        for i in 0..20 {
+            bytes[i] = u8::from_str_radix(&clean[i * 2..i * 2 + 2], 16).ok()?;
+        }
+        Some(Address(bytes))
+    }
+
     pub fn to_hex(&self) -> String {
         format!("0x{}", hex::encode(&self.0))
     }
@@ -65,6 +81,16 @@ pub enum TxPayload {
         pool_id: u64,
         amount_in: u64,
         min_out: u64,
+    },
+    DeployContract {
+        name: String,
+        template: String, // "counter", "token", "vault", "custom"
+        params: Vec<u64>,
+    },
+    CallContract {
+        contract: Address,
+        method: String,
+        args: Vec<u64>,
     },
 }
 
@@ -128,6 +154,15 @@ impl Vertex {
 pub struct AccountState {
     pub balance: u64,
     pub nonce: u64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ContractInfo {
+    pub address: Address,
+    pub name: String,
+    pub template: String,
+    pub creator: Address,
+    pub created_at_round: u64,
 }
 
 pub mod hex {
