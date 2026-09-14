@@ -218,9 +218,12 @@ fn execute_tx_logic(
                 sender_acc.nonce += 1;
                 write_set.insert(sender_key, StateValue::Account(sender_acc));
 
+                use std::cell::RefCell;
+                let contract_reads = RefCell::new(Vec::new());
                 let read_slot_fn = |slot: u64| -> u64 {
                     let slot_key = StateKey::ContractSlot(*contract, slot);
-                    let (val, _) = mv.read(&slot_key, tx_idx);
+                    let (val, ver) = mv.read(&slot_key, tx_idx);
+                    contract_reads.borrow_mut().push((slot_key, ver));
                     match val {
                         StateValue::ContractSlot(v) => v,
                         _ => 0,
@@ -230,6 +233,9 @@ fn execute_tx_logic(
                 let vm_res = SmartContractEngine::execute_call(tx.sender, &info, method, args, read_slot_fn);
                 for (slot, val) in vm_res.contract_slot_writes {
                     write_set.insert(StateKey::ContractSlot(*contract, slot), StateValue::ContractSlot(val));
+                }
+                for (k, ver) in contract_reads.into_inner() {
+                    read_set.insert(k, ver);
                 }
             }
         }

@@ -1,6 +1,9 @@
 /target
 /dist/aether-node
 /dist/aether-bench
+/dist/Aether Node.app
+/dist/*.zip
+/Aether Node.app
 **/*.rs.bk
 *.DS_Store
 *.swp

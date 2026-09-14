@@ -57,7 +57,7 @@ impl NodeState {
         store.deposit(Address::new(101), 1_000_000);
         store.deposit(Address::new(102), 500_000);
 
-        // Pre-deploy 3 Genesis Smart Contracts for immediate interactivity
+        // Pre-deploy Genesis Smart Contracts for immediate interactivity
         let genesis_creator = Address::new(101);
         let (c1, s1) = SmartContractEngine::deploy(genesis_creator, 0, 0, "GenesisCounter", "counter", &[42]);
         store.register_contract(c1.clone());
@@ -76,6 +76,70 @@ impl NodeState {
         for (slot, val) in s3 {
             store.set_contract_slot(c3.address, slot, val);
         }
+
+        // 4. Ethereum Uniswap V2 AMM (ETH / USDC pool: 10,000 ETH, 20,000,000 USDC)
+        let (c4, s4) = SmartContractEngine::deploy(
+            genesis_creator,
+            3,
+            0,
+            "UniswapV2_ETH_USDC",
+            "uniswap_v2",
+            &[10_000, 20_000_000],
+        );
+        store.register_contract(c4.clone());
+        for (slot, val) in s4 {
+            store.set_contract_slot(c4.address, slot, val);
+        }
+
+        // 5. Ethereum MakerDAO CDP (ETH collateral: $2,000 price, 150% min collateral ratio)
+        let (c5, s5) = SmartContractEngine::deploy(
+            genesis_creator,
+            4,
+            0,
+            "MakerDAO_CDP",
+            "maker_cdp",
+            &[2_000, 150],
+        );
+        store.register_contract(c5.clone());
+        for (slot, val) in s5 {
+            store.set_contract_slot(c5.address, slot, val);
+        }
+
+        // 6. Solana Raydium AMM (SOL / USDC pool: 50,000 SOL, 7,500,000 USDC, 0.25% fee)
+        let (c6, s6) = SmartContractEngine::deploy(
+            genesis_creator,
+            5,
+            0,
+            "Raydium_SOL_USDC",
+            "raydium",
+            &[50_000, 7_500_000],
+        );
+        store.register_contract(c6.clone());
+        for (slot, val) in s6 {
+            store.set_contract_slot(c6.address, slot, val);
+        }
+
+        // 7. Solana SPL Token Program (SPL USDC Token: 100,000,000 initial supply)
+        let (c7, s7) = SmartContractEngine::deploy(
+            genesis_creator,
+            6,
+            0,
+            "SPL_USDC_Token",
+            "spl_token",
+            &[100_000_000],
+        );
+        store.register_contract(c7.clone());
+        for (slot, val) in s7 {
+            store.set_contract_slot(c7.address, slot, val);
+        }
+
+        store.set_account(
+            genesis_creator,
+            aether_core::types::AccountState {
+                balance: 1_000_000,
+                nonce: 7,
+            },
+        );
 
         let mut state = NodeState {
             my_address: Address::new(101),
@@ -439,13 +503,12 @@ fn handle_connection(mut stream: TcpStream, state: Arc<RwLock<NodeState>>) {
         let seq_tps = (TX_COUNT as f64) / seq_dur.as_secs_f64();
 
         let par_start = Instant::now();
-        let (new_store, _) = BlockSTMExecutor::execute_block(&txs, &base_store);
+        let (_new_store, _) = BlockSTMExecutor::execute_block(&txs, &base_store);
         let par_dur = par_start.elapsed();
         let par_tps = (TX_COUNT as f64) / par_dur.as_secs_f64();
 
         {
             let mut s = state.write();
-            s.store = new_store;
             s.total_txs += TX_COUNT;
             s.last_tps = par_tps as usize;
         }

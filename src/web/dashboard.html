@@ -579,6 +579,10 @@
     .tag-token { background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981; }
     .tag-vault { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid #f59e0b; }
     .tag-custom { background: rgba(168, 85, 247, 0.2); color: #a855f7; border: 1px solid #a855f7; }
+    .tag-uniswap_v2 { background: rgba(236, 72, 153, 0.2); color: #ec4899; border: 1px solid #ec4899; }
+    .tag-maker_cdp { background: rgba(20, 184, 166, 0.2); color: #14b8a6; border: 1px solid #14b8a6; }
+    .tag-raydium { background: rgba(139, 92, 246, 0.2); color: #8b5cf6; border: 1px solid #8b5cf6; }
+    .tag-spl_token { background: rgba(99, 102, 241, 0.2); color: #6366f1; border: 1px solid #6366f1; }
     .slot-table {
       width: 100%;
       border-collapse: collapse;
@@ -904,6 +908,10 @@
                     <option value="counter">🔢 Counter (카운터 - 누적/계측기)</option>
                     <option value="token">🪙 Token (자체 토큰 공급량 & 전송)</option>
                     <option value="vault">🏦 DeFi Vault (자산 예치 & 복리 금고)</option>
+                    <option value="uniswap_v2">🦄 Uniswap V2 AMM (이더리움 상수곱 AMM)</option>
+                    <option value="maker_cdp">🏛️ MakerDAO CDP (이더리움 초과담보 대출)</option>
+                    <option value="raydium">⚡ Raydium AMM (솔라나 고속 유동성 풀)</option>
+                    <option value="spl_token">🪙 SPL Token (솔라나 표준 토큰 & 동결)</option>
                     <option value="custom">⚙️ Custom Program (커스텀 데이터 슬롯)</option>
                   </select>
                 </div>
@@ -1321,6 +1329,22 @@
         labelDeployParam.innerText = '연이율 APY % (Interest Rate)';
         deployParamInput.value = '5';
         descDeployParam.innerText = '볼트의 기본 APY(%) 이자율입니다. (Slot[2])';
+      } else if (tmpl === 'uniswap_v2') {
+        labelDeployParam.innerText = '풀 초기 유동성 (Reserve X, Reserve Y)';
+        deployParamInput.value = '10000, 20000000';
+        descDeployParam.innerText = '초기 풀 유동성: 토큰X(ETH), 토큰Y(USDC) 수량 (1:2000 비율).';
+      } else if (tmpl === 'maker_cdp') {
+        labelDeployParam.innerText = 'ETH 가격($), 최소 담보비율(%)';
+        deployParamInput.value = '2000, 150';
+        descDeployParam.innerText = '오라클 가격(Slot[0]: 2000) 및 청산 최소 담보비율(Slot[1]: 150%).';
+      } else if (tmpl === 'raydium') {
+        labelDeployParam.innerText = 'SOL 유동성, USDC 유동성';
+        deployParamInput.value = '50000, 7500000';
+        descDeployParam.innerText = 'Raydium 분리형 베이스 풀: 코인(SOL), 호가(USDC) (0.25% 수수료).';
+      } else if (tmpl === 'spl_token') {
+        labelDeployParam.innerText = '초기 총 공급량 (Total Supply)';
+        deployParamInput.value = '100000000';
+        descDeployParam.innerText = 'Solana SPL Token 표준에 따른 초기 공급량입니다.';
       } else {
         labelDeployParam.innerText = '초기 슬롯 값 (쉼표 구분)';
         deployParamInput.value = '100, 200, 300';
@@ -1363,6 +1387,10 @@
         let tagClass = 'tag-counter';
         if (c.template === 'token') tagClass = 'tag-token';
         else if (c.template === 'vault') tagClass = 'tag-vault';
+        else if (c.template === 'uniswap_v2') tagClass = 'tag-uniswap_v2';
+        else if (c.template === 'maker_cdp') tagClass = 'tag-maker_cdp';
+        else if (c.template === 'raydium') tagClass = 'tag-raydium';
+        else if (c.template === 'spl_token') tagClass = 'tag-spl_token';
         else if (c.template === 'custom') tagClass = 'tag-custom';
 
         item.innerHTML = `
@@ -1430,6 +1458,28 @@
           { val: 'deposit', text: 'deposit(amount) - 자산 예치 & 지분 수령', argLabel: '예치 수량 (AETH)', argVal: '100', desc: 'AETH를 금고에 예치하고 지분(Shares)을 발급받습니다.' },
           { val: 'compound', text: 'compound() - 연이율 이자 복리 정산', argLabel: '인자 없음 (빈칸)', argVal: '', desc: '설정된 APY에 따라 자산 수익을 정산하여 볼트에 복리 반영합니다.' }
         ],
+        uniswap_v2: [
+          { val: 'swap_x_for_y', text: 'swap_x_for_y(dx, min_dy) - ETH로 USDC 매수', argLabel: '투입 ETH (dx), 최소 수령 USDC (min_dy)', argVal: '10, 19000', desc: '상수곱 공식 dy = y*dx*997 / (x*1000 + dx*997) 적용, 0.3% 수수료 차감 교환' },
+          { val: 'swap_y_for_x', text: 'swap_y_for_x(dy, min_dx) - USDC로 ETH 매수', argLabel: '투입 USDC (dy), 최소 수령 ETH (min_dx)', argVal: '20000, 9', desc: 'USDC 투입하여 ETH 교환 (0.3% AMM 프로토콜 수수료 차감)' },
+          { val: 'mint_lp', text: 'mint_lp(dx, dy) - 유동성 추가 공급', argLabel: '공급 ETH (dx), 공급 USDC (dy)', argVal: '100, 200000', desc: '비례 유동성을 예치하고 지분 증명 LP 토큰을 신규 민팅합니다.' },
+          { val: 'burn_lp', text: 'burn_lp(lp_amount) - 유동성 회수 및 소각', argLabel: '소각할 LP 수량', argVal: '5000', desc: 'LP 토큰을 소각하고 비례하는 ETH/USDC 자산을 인출합니다.' }
+        ],
+        maker_cdp: [
+          { val: 'deposit_collateral', text: 'deposit_collateral(eth_amount) - 담보 예치', argLabel: '예치할 ETH 수량', argVal: '10', desc: 'CDP 볼트에 ETH 담보를 예치합니다. (ETH 가격: $2,000)' },
+          { val: 'borrow_debt', text: 'borrow_debt(dai_amount) - DAI 부채 대출', argLabel: '대출할 DAI 수량', argVal: '10000', desc: '담보인정비율(최소 150%) 검증 통과 시 DAI 부채를 발행합니다.' },
+          { val: 'repay_debt', text: 'repay_debt(dai_amount) - DAI 부채 상환', argLabel: '상환할 DAI 수량', argVal: '5000', desc: '발행된 DAI 부채를 상환하여 담보비율을 안전하게 높입니다.' }
+        ],
+        raydium: [
+          { val: 'swap_coin_for_pc', text: 'swap_coin_for_pc(sol_in, min_usdc) - SOL 매도', argLabel: '투입 SOL, 최소 수령 USDC', argVal: '50, 7400', desc: '솔라나 Raydium 0.25% 수수료 풀을 통해 고속 교환합니다.' },
+          { val: 'swap_pc_for_coin', text: 'swap_pc_for_coin(usdc_in, min_sol) - USDC로 SOL 매수', argLabel: '투입 USDC, 최소 수령 SOL', argVal: '7500, 48', desc: 'USDC 가격화폐 투입으로 SOL 코인을 교환합니다.' },
+          { val: 'add_liquidity', text: 'add_liquidity(coin, pc) - 유동성 공급', argLabel: '공급 SOL, 공급 USDC', argVal: '5000, 750000', desc: 'Raydium 유동성 풀에 자산을 공급하고 지분을 적립합니다.' }
+        ],
+        spl_token: [
+          { val: 'transfer', text: 'transfer(to, amount) - 토큰 전송', argLabel: '수신자 ID, 수량', argVal: '102, 500', desc: 'SPL 토큰 표준에 따라 잔고를 전송합니다. (동결 계정 검증)' },
+          { val: 'mint_to', text: 'mint_to(to, amount) - 추가 발행', argLabel: '수신자 ID, 발행량', argVal: '102, 1000', desc: 'Mint Authority 권한으로 신규 토큰을 추가 발행합니다.' },
+          { val: 'freeze_account', text: 'freeze_account(account) - 지갑 동결', argLabel: '동결할 계정 ID', argVal: '102', desc: 'Freeze Authority 권한으로 악성 지갑의 전송을 전면 차단합니다.' },
+          { val: 'thaw_account', text: 'thaw_account(account) - 동결 해제', argLabel: '해제할 계정 ID', argVal: '102', desc: '동결되었던 지갑의 전송 권한을 정상 복구합니다.' }
+        ],
         custom: [
           { val: 'set_slot', text: 'set_slot(slot, val) - 슬롯 쓰기', argLabel: '슬롯 번호, 저장할 값 (쉼표 구분)', argVal: '5, 8888', desc: '지정한 스토리지 슬롯에 임의의 값을 직접 기록합니다.' }
         ]
@@ -1487,6 +1537,24 @@
         else if (c.template === 'vault' && k === 1) desc = '🎫 Total Shares Minted (발행된 총 지분)';
         else if (c.template === 'vault' && k === 2) desc = '📈 APY Interest Rate % (연이율)';
         else if (c.template === 'vault' && k >= 100) desc = `👤 User #${k - 100} Vault Shares (보유 지분)`;
+        else if (c.template === 'uniswap_v2' && k === 0) desc = '🦄 Reserve X (ETH 풀 잔고)';
+        else if (c.template === 'uniswap_v2' && k === 1) desc = '🦄 Reserve Y (USDC 풀 잔고)';
+        else if (c.template === 'uniswap_v2' && k === 2) desc = '🦄 Total LP Token Supply (총 LP 토큰)';
+        else if (c.template === 'uniswap_v2' && k >= 100) desc = `🦄 User #${k - 100} LP Token Balance`;
+        else if (c.template === 'maker_cdp' && k === 0) desc = '🏛️ ETH Oracle Price ($2,000/ETH)';
+        else if (c.template === 'maker_cdp' && k === 1) desc = '🏛️ Min Collateral Ratio % (150% 청산 기준)';
+        else if (c.template === 'maker_cdp' && k >= 200) desc = `🏛️ User #${k - 200} Debt (DAI 부채)`;
+        else if (c.template === 'maker_cdp' && k >= 100) desc = `🏛️ User #${k - 100} Collateral (ETH 담보)`;
+        else if (c.template === 'raydium' && k === 0) desc = '⚡ Coin Reserve (SOL 풀 잔고)';
+        else if (c.template === 'raydium' && k === 1) desc = '⚡ PC Reserve (USDC 풀 잔고)';
+        else if (c.template === 'raydium' && k === 2) desc = '⚡ Total LP Shares (총 공급 지분)';
+        else if (c.template === 'raydium' && k === 3) desc = '⚡ Fee Bps (25 = 0.25% 수수료)';
+        else if (c.template === 'raydium' && k >= 100) desc = `⚡ User #${k - 100} LP Shares`;
+        else if (c.template === 'spl_token' && k === 0) desc = '🪙 SPL Total Supply (총 공급량)';
+        else if (c.template === 'spl_token' && k === 1) desc = '🔑 Mint Authority (발행 권한자 ID)';
+        else if (c.template === 'spl_token' && k === 2) desc = '❄️ Freeze Authority (동결 권한자 ID)';
+        else if (c.template === 'spl_token' && k >= 200) desc = `❄️ Account #${k - 200} Frozen Flag (1=동결)`;
+        else if (c.template === 'spl_token' && k >= 100) desc = `🪙 Account #${k - 100} SPL Balance`;
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
