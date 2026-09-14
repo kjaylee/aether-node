@@ -1,0 +1,7 @@
+/target
+/dist/aether-node
+/dist/aether-bench
+**/*.rs.bk
+*.DS_Store
+*.swp
+*.log
