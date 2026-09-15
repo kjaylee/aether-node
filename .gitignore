@@ -3,6 +3,7 @@
 /dist/aether-bench
 /dist/Aether Node.app
 /dist/*.zip
+/dist/*.dmg
 /Aether Node.app
 **/*.rs.bk
 *.DS_Store

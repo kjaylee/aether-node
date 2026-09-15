@@ -570,16 +570,23 @@ fn main() {
     // Open browser automatically in standalone App Window if available (cross-platform)
     #[cfg(target_os = "macos")]
     {
-        let launched = std::process::Command::new("open")
-            .args(["-a", "Brave Browser", "--args", &format!("--app={}", url)])
-            .spawn()
-            .or_else(|_| {
-                std::process::Command::new("open")
-                    .args(["-a", "Google Chrome", "--args", &format!("--app={}", url)])
-                    .spawn()
-            });
+        let opened_app_window = if std::path::Path::new("/Applications/Google Chrome.app").exists() {
+            std::process::Command::new("open")
+                .args(["-na", "Google Chrome", "--args", &format!("--app={}", url)])
+                .status()
+                .map(|s| s.success())
+                .unwrap_or(false)
+        } else if std::path::Path::new("/Applications/Brave Browser.app").exists() {
+            std::process::Command::new("open")
+                .args(["-na", "Brave Browser", "--args", &format!("--app={}", url)])
+                .status()
+                .map(|s| s.success())
+                .unwrap_or(false)
+        } else {
+            false
+        };
 
-        if launched.is_err() {
+        if !opened_app_window {
             let _ = std::process::Command::new("open").arg(&url).spawn();
         }
     }

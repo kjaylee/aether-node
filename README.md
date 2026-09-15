@@ -89,18 +89,36 @@
 
 ## 🚀 원클릭 실행 및 설치 (Zero-Config)
 
-### 1. macOS & Linux
+### 🍏 macOS (가장 추천하는 방법: 1줄 명령어 자동 설치)
+Apple 미인증 오픈소스 특유의 Gatekeeper("악성 코드가 없음을 확인할 수 없습니다") 경고 없이, **단 3초 만에 /Applications에 정식 맥앱으로 설치 및 실행**됩니다:
 ```bash
-git clone <REPO_URL>
-cd elegant-oppenheimer
+curl -fsSL https://raw.githubusercontent.com/kjaylee/aether-node/main/install.sh | bash
+```
+
+#### 📦 macOS DMG 디스크 이미지 직접 설치
+1. [GitHub Releases](https://github.com/kjaylee/aether-node/releases/latest)에서 **`Aether-Node-v0.1.0-macOS.dmg`** 다운로드.
+2. DMG를 열고 **`Aether Node.app`을 `Applications` 폴더로 드래그 앤 드롭**.
+3. *처음 실행 시 보안 경고("악성 코드가 없음을 확인할 수 없습니다")가 뜰 때 해결법*:
+   - **터미널 1초 해결 (추천)**:
+     ```bash
+     xattr -cr "/Applications/Aether Node.app"
+     ```
+   - **시스템 설정 해결**: Mac **시스템 설정 > 개인정보 보호 및 보안(Privacy & Security)** > 하단 보안 영역에서 **"확인 없이 열기(Open Anyway)"** 클릭.
+
+---
+
+### 🐧 Linux & 개발자 소스 실행
+```bash
+git clone https://github.com/kjaylee/aether-node.git
+cd aether-node
 ./start.sh
 ```
 
-### 2. Windows
+### 🪟 Windows
 `start.bat` 파일을 더블 클릭하거나 명령 프롬프트(CMD)에서 실행합니다.
 
 > 💡 **실행 시 일어나는 일**:  
-> 터미널에 아스키 아트 배너와 함께 로컬 노드가 백그라운드 가동되며, **기본 브라우저 또는 독립 앱 창에 `http://127.0.0.1:8080` 대시보드가 자동으로 팝업**됩니다.
+> 초경량 데몬이 백그라운드에서 가동되며, **기본 브라우저 또는 독립 네이티브 앱 창에 `http://127.0.0.1:8080` 대시보드가 자동으로 팝업**됩니다. Spotlight(Cmd+Space)나 Launchpad에서 언제든지 `Aether Node`를 검색하여 바로 열 수 있습니다.
 
 ---
 
