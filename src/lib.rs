@@ -6,3 +6,4 @@ pub mod consensus;
 pub mod execution;
 pub mod vm;
 pub mod p2p;
+pub mod dht;

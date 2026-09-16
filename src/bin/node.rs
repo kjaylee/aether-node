@@ -12,12 +12,13 @@ use aether_core::types::{
     TxPayload, Vertex,
 };
 use aether_core::vm::SmartContractEngine;
-use parking_lot::RwLock;
+use parking_lot::{Mutex, RwLock};
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::io::{Read, Write};
-use std::net::{TcpListener, TcpStream};
+use std::net::{IpAddr, TcpListener, TcpStream};
 use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
@@ -314,6 +315,67 @@ fn sync_with_peer(peer_endpoint: &str, state: Arc<RwLock<NodeState>>) {
     });
 }
 
+pub struct RateLimiter {
+    records: Mutex<HashMap<IpAddr, (Instant, u32, Option<Instant>)>>,
+    max_per_sec: u32,
+    block_duration: Duration,
+}
+
+impl RateLimiter {
+    pub fn new(max_per_sec: u32, block_duration: Duration) -> Self {
+        Self {
+            records: Mutex::new(HashMap::new()),
+            max_per_sec,
+            block_duration,
+        }
+    }
+
+    pub fn check_allowed(&self, ip: IpAddr) -> bool {
+        if ip.is_loopback() {
+            return true;
+        }
+
+        let now = Instant::now();
+        let mut map = self.records.lock();
+
+        if map.len() > 5000 {
+            map.retain(|_, (start, _, blocked)| {
+                now.duration_since(*start) < Duration::from_secs(60) || blocked.map_or(false, |b| now < b)
+            });
+        }
+
+        let entry = map.entry(ip).or_insert((now, 0, None));
+
+        if let Some(blocked_until) = entry.2 {
+            if now < blocked_until {
+                return false;
+            } else {
+                entry.2 = None;
+                entry.0 = now;
+                entry.1 = 0;
+            }
+        }
+
+        if now.duration_since(entry.0) > Duration::from_secs(1) {
+            entry.0 = now;
+            entry.1 = 1;
+            true
+        } else {
+            entry.1 += 1;
+            if entry.1 > self.max_per_sec {
+                entry.2 = Some(now + self.block_duration);
+                println!(" \x1b[1;31m⚠ [보안 방어벽]\x1b[0m 비정상 트래픽 감지: IP({}) 1초당 {}회 초과 요청 -> 일시 차단!", ip, self.max_per_sec);
+                false
+            } else {
+                true
+            }
+        }
+    }
+}
+
+const MAX_HEADER_SIZE: usize = 64 * 1024;        // 64 KB max headers
+const MAX_BODY_SIZE: usize = 1024 * 1024;         // 1 MB max body payload
+
 fn read_http_request(stream: &mut TcpStream) -> Option<String> {
     let mut buffer = Vec::with_capacity(8192);
     let mut temp = [0u8; 4096];
@@ -328,6 +390,9 @@ fn read_http_request(stream: &mut TcpStream) -> Option<String> {
             break;
         }
         buffer.extend_from_slice(&temp[..n]);
+        if buffer.len() > MAX_HEADER_SIZE {
+            return None; // Exceeded header limit - potential Slowloris / DoS
+        }
 
         if let Some(pos) = buffer.windows(4).position(|w| w == b"\r\n\r\n") {
             header_end = Some(pos + 4);
@@ -342,6 +407,10 @@ fn read_http_request(stream: &mut TcpStream) -> Option<String> {
         }
     }
 
+    if content_length > MAX_BODY_SIZE {
+        return None; // Payload exceeds 1MB - protect memory from OOM
+    }
+
     let h_end = header_end?;
     let body_received = buffer.len().saturating_sub(h_end);
     let mut remaining = content_length.saturating_sub(body_received);
@@ -352,14 +421,31 @@ fn read_http_request(stream: &mut TcpStream) -> Option<String> {
             break;
         }
         buffer.extend_from_slice(&temp[..n]);
+        if buffer.len() > MAX_HEADER_SIZE + MAX_BODY_SIZE {
+            return None;
+        }
         remaining = remaining.saturating_sub(n);
     }
 
     String::from_utf8(buffer).ok()
 }
 
-fn handle_connection(mut stream: TcpStream, state: Arc<RwLock<NodeState>>) {
+fn handle_connection(
+    mut stream: TcpStream,
+    state: Arc<RwLock<NodeState>>,
+    rate_limiter: Arc<RateLimiter>,
+) {
     let peer_addr = stream.peer_addr().ok();
+    let is_local = peer_addr.map(|a| a.ip().is_loopback()).unwrap_or(false);
+
+    if let Some(addr) = peer_addr {
+        if !rate_limiter.check_allowed(addr.ip()) {
+            let resp = "HTTP/1.1 429 Too Many Requests\r\nContent-Length: 21\r\nConnection: close\r\n\r\nRate limit exceeded.\n";
+            let _ = stream.write_all(resp.as_bytes());
+            return;
+        }
+    }
+
     let request = match read_http_request(&mut stream) {
         Some(r) => r,
         None => return,
@@ -394,7 +480,7 @@ fn handle_connection(mut stream: TcpStream, state: Arc<RwLock<NodeState>>) {
                     .unwrap_or_else(|| "127.0.0.1".to_string());
                 let remote_endpoint = format!("{}:{}", remote_ip, hs.listen_port);
 
-                let my_ident = {
+                let (my_ident, p_list) = {
                     let s = state.read();
                     if hs.identity.node_id != s.identity.node_id {
                         s.peer_mgr.add_or_update(PeerInfo {
@@ -409,10 +495,15 @@ fn handle_connection(mut stream: TcpStream, state: Arc<RwLock<NodeState>>) {
                             round: 0,
                         });
                     }
-                    s.identity.clone()
+                    let p_list: Vec<String> = s.peer_mgr.list().into_iter().map(|p| p.endpoint).collect();
+                    (s.identity.clone(), p_list)
                 };
 
-                let resp_json = serde_json::to_string(&my_ident).unwrap_or_default();
+                let resp = aether_core::p2p::HandshakeResponse {
+                    identity: my_ident,
+                    known_peers: p_list,
+                };
+                let resp_json = serde_json::to_string(&resp).unwrap_or_default();
                 send_json(&mut stream, &resp_json);
                 return;
             }
@@ -421,8 +512,12 @@ fn handle_connection(mut stream: TcpStream, state: Arc<RwLock<NodeState>>) {
         return;
     }
 
-    // P2P Connect: Request to connect to an external peer
+    // P2P Connect: Request to connect to an external peer (Local only)
     if method == "POST" && path == "/api/p2p/connect" {
+        if !is_local {
+            send_json(&mut stream, r#"{"error":"forbidden: local_control_only"}"#);
+            return;
+        }
         if let Some(body_start) = request.find("\r\n\r\n") {
             let body = &request[body_start + 4..];
             if let Ok(val) = serde_json::from_str::<serde_json::Value>(body.trim()) {
@@ -587,6 +682,10 @@ fn handle_connection(mut stream: TcpStream, state: Arc<RwLock<NodeState>>) {
     }
 
     if method == "POST" && path == "/api/step" {
+        if !is_local {
+            send_json(&mut stream, r#"{"error":"forbidden: local_control_only"}"#);
+            return;
+        }
         let (round, vertex_opt, peer_mgr) = {
             let mut s = state.write();
             let v = s.advance_round();
@@ -603,6 +702,10 @@ fn handle_connection(mut stream: TcpStream, state: Arc<RwLock<NodeState>>) {
     }
 
     if method == "POST" && path == "/api/mev_attack" {
+        if !is_local {
+            send_json(&mut stream, r#"{"error":"forbidden: local_control_only"}"#);
+            return;
+        }
         let ciphertext = "[0xcf, 0xb3, 0xdf, 0x04, 0xc8, 0x88, 0x38, 0xd8]";
         let json = format!(
             r#"{{"ciphertext_preview":"{}","status":"attack_blocked","mev_extracted":0}}"#,
@@ -638,6 +741,10 @@ fn handle_connection(mut stream: TcpStream, state: Arc<RwLock<NodeState>>) {
     }
 
     if method == "POST" && path == "/api/contract/deploy" {
+        if !is_local {
+            send_json(&mut stream, r#"{"error":"forbidden: local_control_only"}"#);
+            return;
+        }
         if let Some(body_start) = request.find("\r\n\r\n") {
             let body = &request[body_start + 4..];
             if let Ok(val) = serde_json::from_str::<serde_json::Value>(body.trim()) {
@@ -692,6 +799,10 @@ fn handle_connection(mut stream: TcpStream, state: Arc<RwLock<NodeState>>) {
     }
 
     if method == "POST" && path == "/api/contract/call" {
+        if !is_local {
+            send_json(&mut stream, r#"{"error":"forbidden: local_control_only"}"#);
+            return;
+        }
         if let Some(body_start) = request.find("\r\n\r\n") {
             let body = &request[body_start + 4..];
             if let Ok(val) = serde_json::from_str::<serde_json::Value>(body.trim()) {
@@ -742,6 +853,10 @@ fn handle_connection(mut stream: TcpStream, state: Arc<RwLock<NodeState>>) {
     }
 
     if method == "POST" && path == "/api/tx" {
+        if !is_local {
+            send_json(&mut stream, r#"{"error":"forbidden: local_control_only"}"#);
+            return;
+        }
         if let Some(body_start) = request.find("\r\n\r\n") {
             let body = &request[body_start + 4..];
             if let Ok(val) = serde_json::from_str::<serde_json::Value>(body) {
@@ -780,6 +895,10 @@ fn handle_connection(mut stream: TcpStream, state: Arc<RwLock<NodeState>>) {
     }
 
     if method == "POST" && path == "/api/bench" {
+        if !is_local {
+            send_json(&mut stream, r#"{"error":"forbidden: local_control_only"}"#);
+            return;
+        }
         const TX_COUNT: usize = 10_000;
         let mut rng = StdRng::seed_from_u64(42);
         let mut txs = Vec::with_capacity(TX_COUNT);
@@ -967,6 +1086,9 @@ fn main() {
     // Automatically peer with primary seed bootnode
     start_bootnode_discovery(peer_mgr.clone());
 
+    // Start BitTorrent Mainline DHT Free-Riding Worker (Global Serverless Peer Discovery)
+    aether_core::dht::start_dht_worker(peer_mgr.clone(), port);
+
     // If --peer argument was given, connect immediately
     if let Some(peer_addr) = connect_peer_arg {
         let pm = peer_mgr.clone();
@@ -1038,11 +1160,14 @@ fn main() {
         let _ = std::process::Command::new("cmd").args(["/C", "start", &local_url]).spawn();
     }
 
+    let rate_limiter = Arc::new(RateLimiter::new(60, Duration::from_secs(60)));
+
     for stream in listener.incoming() {
         if let Ok(stream) = stream {
             let state_clone = Arc::clone(&state);
+            let rl_clone = Arc::clone(&rate_limiter);
             thread::spawn(move || {
-                handle_connection(stream, state_clone);
+                handle_connection(stream, state_clone, rl_clone);
             });
         }
     }

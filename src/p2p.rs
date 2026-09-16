@@ -17,6 +17,45 @@ pub struct HandshakeRequest {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct HandshakeResponse {
+    pub identity: NodeIdentity,
+    #[serde(default)]
+    pub known_peers: Vec<String>,
+}
+
+pub fn get_known_peers_path() -> std::path::PathBuf {
+    if let Ok(home) = std::env::var("HOME") {
+        let dir = std::path::PathBuf::from(home).join(".aether");
+        let _ = std::fs::create_dir_all(&dir);
+        dir.join("known_peers.json")
+    } else {
+        std::path::PathBuf::from("./known_peers.json")
+    }
+}
+
+pub fn load_cached_peers() -> Vec<String> {
+    let path = get_known_peers_path();
+    if let Ok(data) = std::fs::read_to_string(&path) {
+        if let Ok(list) = serde_json::from_str::<Vec<String>>(&data) {
+            return list;
+        }
+    }
+    Vec::new()
+}
+
+pub fn save_cached_peer(endpoint: &str) {
+    if endpoint.is_empty() { return; }
+    let path = get_known_peers_path();
+    let mut peers = load_cached_peers();
+    if !peers.contains(&endpoint.to_string()) {
+        peers.push(endpoint.to_string());
+        if let Ok(json) = serde_json::to_string_pretty(&peers) {
+            let _ = std::fs::write(&path, json);
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BeaconPayload {
     pub magic: String,
     pub node_id: String,
@@ -76,6 +115,7 @@ impl PeerManager {
             .unwrap_or_default()
             .as_millis() as u64;
         peer.last_seen_ms = now;
+        save_cached_peer(&peer.endpoint);
         self.peers.write().insert(peer.endpoint.clone(), peer);
     }
 
@@ -120,8 +160,15 @@ impl PeerManager {
         let res = http_post(trimmed, "/api/p2p/handshake", &req_body, Duration::from_secs(3))?;
         let latency = start.elapsed().as_millis() as u64;
 
-        let remote_ident: NodeIdentity =
-            serde_json::from_str(&res).map_err(|e| format!("응답 해석 실패: {}", e))?;
+        let (remote_ident, extra_peers): (NodeIdentity, Vec<String>) = {
+            if let Ok(hs_resp) = serde_json::from_str::<HandshakeResponse>(&res) {
+                (hs_resp.identity, hs_resp.known_peers)
+            } else if let Ok(ident) = serde_json::from_str::<NodeIdentity>(&res) {
+                (ident, Vec::new())
+            } else {
+                return Err(format!("응답 해석 실패: {}", res));
+            }
+        };
 
         if remote_ident.node_id == self.my_identity.node_id {
             return Err("자기 자신 노드입니다".to_string());
@@ -140,6 +187,17 @@ impl PeerManager {
         };
 
         self.add_or_update(peer_info.clone());
+
+        // Recursive PEX (Peer Exchange): connect to secondary peers introduced by this peer
+        let pm_clone = self.clone();
+        thread::spawn(move || {
+            for ep in extra_peers {
+                if !pm_clone.contains_endpoint(&ep) {
+                    let _ = pm_clone.connect_peer(&ep);
+                }
+            }
+        });
+
         Ok(peer_info)
     }
 
@@ -493,6 +551,23 @@ pub const DEFAULT_BOOTNODES: &[&str] = &[
     "127.0.0.1:8081",
 ];
 
+/// Fetch dynamic public seeds from GitHub repository (acting as DNS seed directory)
+pub fn fetch_github_seeds() -> Vec<String> {
+    let output = std::process::Command::new("curl")
+        .args(["-fsSL", "--connect-timeout", "2", "--max-time", "3", "https://raw.githubusercontent.com/kjaylee/aether-node/main/peers.json"])
+        .output();
+    if let Ok(out) = output {
+        if out.status.success() {
+            if let Ok(text) = String::from_utf8(out.stdout) {
+                if let Ok(list) = serde_json::from_str::<Vec<String>>(&text) {
+                    return list;
+                }
+            }
+        }
+    }
+    Vec::new()
+}
+
 /// Automatically connect to seed bootnodes with continuous background auto-peering
 pub fn start_bootnode_discovery(peer_mgr: PeerManager) {
     thread::spawn(move || {
@@ -500,11 +575,35 @@ pub fn start_bootnode_discovery(peer_mgr: PeerManager) {
         thread::sleep(Duration::from_millis(1500));
         loop {
             if peer_mgr.count() == 0 {
-                for &seed in DEFAULT_BOOTNODES {
-                    if peer_mgr.contains_endpoint(seed) {
+                // 1. Gather all candidate seeds: Hardcoded + GitHub Public Seeds + Local Cached Peers
+                let mut candidate_seeds: Vec<String> = DEFAULT_BOOTNODES.iter().map(|s| s.to_string()).collect();
+
+                // Add GitHub seeds
+                for gh_seed in fetch_github_seeds() {
+                    if !candidate_seeds.contains(&gh_seed) {
+                        candidate_seeds.push(gh_seed);
+                    }
+                }
+
+                // Add locally cached known peers (~/.aether/known_peers.json)
+                for cached in load_cached_peers() {
+                    if !candidate_seeds.contains(&cached) {
+                        candidate_seeds.push(cached);
+                    }
+                }
+
+                // Add BitTorrent Mainline DHT discovered peers (Free-Riding Swarm)
+                for dht_peer in crate::dht::discover_dht_peers() {
+                    if !candidate_seeds.contains(&dht_peer) {
+                        candidate_seeds.push(dht_peer);
+                    }
+                }
+
+                for seed in candidate_seeds {
+                    if peer_mgr.contains_endpoint(&seed) {
                         continue;
                     }
-                    if let Ok(info) = peer_mgr.connect_peer(seed) {
+                    if let Ok(info) = peer_mgr.connect_peer(&seed) {
                         println!(" \x1b[1;32m✔ [부트노드 자동 피어링]\x1b[0m 시드 노드({}: {}) 연결 성공!", seed, info.node_id);
                         break;
                     }
