@@ -713,47 +713,50 @@
           </div>
         </div>
 
-        <!-- P2P Peer Network Hub Card -->
+        <!-- P2P Live Network Topology Graph Card -->
         <div style="margin-top: 1.5rem; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px; padding: 1.25rem; width: 100%; box-shadow: 0 4px 20px rgba(0,0,0,0.4);">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 0.5rem;">
             <div style="display: flex; align-items: center; gap: 0.5rem;">
               <span style="font-size: 1.2rem;">🌐</span>
-              <b style="font-size: 1rem; color: #fff;">실시간 P2P 분산 피어 네트워크</b>
-              <span class="badge-spirit" id="p2p-badge-status" style="border-color: var(--accent-orange); color: var(--accent-orange);">단독 노드 가동 중</span>
+              <b style="font-size: 1rem; color: #fff;">실시간 P2P 분산 네트워크 토폴로지</b>
+              <span class="badge-spirit" id="p2p-badge-status" style="border-color: var(--accent-orange); color: var(--accent-orange);">단독 주권 가동</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 0.5rem; background: rgba(0,0,0,0.4); padding: 0.3rem 0.75rem; border-radius: 6px; border: 1px solid var(--border);">
-              <span style="font-size: 0.8rem; color: var(--text-muted);">내 P2P 주소:</span>
-              <code id="my-p2p-endpoint" style="color: var(--accent-cyan); font-weight: bold;">http://127.0.0.1:8080</code>
+            <div style="display: flex; align-items: center; gap: 0.5rem; background: rgba(0,0,0,0.5); padding: 0.3rem 0.75rem; border-radius: 6px; border: 1px solid var(--border);">
+              <span style="font-size: 0.8rem; color: var(--text-muted);">내 노드 URI:</span>
+              <code id="my-p2p-endpoint" style="color: var(--accent-cyan); font-weight: bold; font-size: 0.82rem;">aether://0x...</code>
               <button class="btn btn-secondary" id="btn-copy-endpoint" style="padding: 0.2rem 0.6rem; font-size: 0.75rem;">복사</button>
             </div>
           </div>
 
-          <!-- Peer Connect Form -->
+          <!-- Peer Connect Bar -->
           <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
-            <input type="text" id="input-peer-endpoint" placeholder="상대방 PC 노드 주소 입력 (예: 192.168.0.25:8080 또는 127.0.0.1:8081)" style="flex: 1; background: rgba(0,0,0,0.5); border: 1px solid var(--border); border-radius: 6px; padding: 0.5rem 0.85rem; color: #fff; font-size: 0.85rem;" />
+            <input type="text" id="input-peer-endpoint" placeholder="상대방 노드 URI 또는 P2P 주소 입력 (예: aether://0x... 또는 호스트 주소)" style="flex: 1; background: rgba(0,0,0,0.6); border: 1px solid var(--border); border-radius: 6px; padding: 0.5rem 0.85rem; color: #fff; font-size: 0.85rem;" />
             <button class="btn" id="btn-connect-peer" style="background: linear-gradient(135deg, var(--accent-cyan), #0284c7); color: #000; font-weight: bold; white-space: nowrap;">➕ 피어 연결</button>
           </div>
-          <div id="peer-connect-msg" style="font-size: 0.8rem; margin-bottom: 0.75rem; display: none;"></div>
+          <div id="peer-connect-msg" style="font-size: 0.8rem; margin-bottom: 0.5rem; display: none;"></div>
 
-          <!-- Connected Peers Table -->
-          <div style="overflow-x: auto;">
-            <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
-              <thead>
-                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1); color: var(--text-muted); text-align: left;">
-                  <th style="padding: 0.5rem;">노드 ID</th>
-                  <th style="padding: 0.5rem;">네트워크 IP / Port</th>
-                  <th style="padding: 0.5rem;">응답 속도 (Latency)</th>
-                  <th style="padding: 0.5rem;">상태</th>
-                </tr>
-              </thead>
-              <tbody id="peer-table-body">
-                <tr>
-                  <td colspan="4" style="padding: 1rem; text-align: center; color: var(--text-muted);">
-                    연결 대기 중입니다. 같은 Wi-Fi의 다른 PC에서 Aether Node를 실행하면 <b>UDP 비콘으로 자동 감지</b>되거나, 위 입력창에 상대방 IP를 입력해 연결할 수 있습니다.
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <!-- Live Topology Graph Canvas -->
+          <div style="position: relative; width: 100%; height: 320px; background: radial-gradient(circle at center, rgba(16, 28, 50, 0.95) 0%, rgba(5, 8, 16, 1) 100%); border: 1px solid var(--border); border-radius: 8px; overflow: hidden;">
+            <canvas id="p2p-topology-canvas" width="800" height="320" style="width: 100%; height: 100%; display: block;"></canvas>
+            
+            <!-- Graph Legend -->
+            <div style="position: absolute; top: 10px; left: 12px; display: flex; gap: 0.75rem; pointer-events: none; background: rgba(0,0,0,0.4); padding: 0.25rem 0.6rem; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08);">
+              <span style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; color: var(--accent-cyan);">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--accent-cyan); box-shadow: 0 0 6px var(--accent-cyan);"></span>
+                내 주권 노드 (Core)
+              </span>
+              <span style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; color: var(--accent-green);">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--accent-green); box-shadow: 0 0 6px var(--accent-green);"></span>
+                동기화 피어 (Active Peer)
+              </span>
+              <span style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; color: var(--accent-orange);">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--accent-orange); box-shadow: 0 0 6px var(--accent-orange);"></span>
+                실시간 가십 플로우 (Gossip)
+              </span>
+            </div>
+
+            <!-- Hover Tooltip -->
+            <div id="p2p-tooltip" style="position: absolute; display: none; background: rgba(10, 16, 30, 0.95); border: 1px solid var(--accent-cyan); border-radius: 6px; padding: 0.5rem 0.75rem; font-size: 0.78rem; pointer-events: none; z-index: 10; box-shadow: 0 0 15px rgba(6, 182, 212, 0.4); color: #fff;"></div>
           </div>
         </div>
 
@@ -1183,14 +1186,24 @@
         document.getElementById('simple-balance').innerText = `${data.balance.toLocaleString()} AETH`;
 
         if (data.node_id) {
-          document.getElementById('val-node-id').innerText = `${data.node_id.slice(0, 6)}...${data.node_id.slice(-4)}`;
-          document.getElementById('val-node-id').title = data.node_id;
-        }
+          p2pData.myNodeId = data.node_id;
+          p2pData.round = data.round || 1;
+          p2pData.peers = data.peers || [];
 
-        if (data.local_ip && data.port) {
-          const ep = `http://${data.local_ip}:${data.port}`;
+          const valNodeIdEl = document.getElementById('val-node-id');
+          if (valNodeIdEl) {
+            valNodeIdEl.innerText = `${data.node_id.slice(0, 6)}...${data.node_id.slice(-4)}`;
+            valNodeIdEl.title = `aether://${data.node_id}`;
+          }
+
           const myEpEl = document.getElementById('my-p2p-endpoint');
-          if (myEpEl) myEpEl.innerText = ep;
+          if (myEpEl) {
+            myEpEl.innerText = `aether://${data.node_id.slice(0, 8)}...${data.node_id.slice(-4)}`;
+            myEpEl.title = `aether://${data.node_id}`;
+            myEpEl.dataset.fullUri = (data.local_ip && data.port) ? `aether://${data.node_id}@${data.local_ip}:${data.port}` : `aether://${data.node_id}`;
+          }
+        } else {
+          p2pData.peers = data.peers || [];
         }
 
         const simpleRewardEl = document.getElementById('simple-reward');
@@ -1205,36 +1218,19 @@
 
         if (peerCount === 0) {
           if (statusTitle) statusTitle.innerText = "내 컴퓨터가 단독 주권 노드로 검증 중입니다";
-          if (statusSub) statusSub.innerHTML = `로컬 P2P 가동 완료 • 다른 PC나 VM을 연결하여 탈중앙 네트워크를 확장할 수 있습니다.`;
+          if (statusSub) statusSub.innerHTML = `로컬 P2P 메시망 가동 중 • 다른 PC나 VM의 Aether Node를 자동 감지하거나 피어 URI를 연결할 수 있습니다.`;
           if (p2pBadge) {
-            p2pBadge.innerText = "단독 노드 가동 중";
+            p2pBadge.innerText = "단독 주권 가동";
             p2pBadge.style.borderColor = "var(--accent-orange)";
             p2pBadge.style.color = "var(--accent-orange)";
           }
         } else {
           if (statusTitle) statusTitle.innerText = `🌐 전 세계 분산 피어 ${peerCount}대와 실시간 동기화 중`;
-          if (statusSub) statusSub.innerHTML = `P2P 분산 합의 활성화됨 • 실시간 블록 및 스마트 계약 상태 완결 동기화 중입니다.`;
+          if (statusSub) statusSub.innerHTML = `P2P 분산 메시 토폴로지 활성화 • 실시간 블록, 스마트 계약 및 글로벌 상태 동기화 중입니다.`;
           if (p2pBadge) {
-            p2pBadge.innerText = `피어 ${peerCount}대 연결됨`;
+            p2pBadge.innerText = `피어 ${peerCount}대 동기화됨`;
             p2pBadge.style.borderColor = "var(--accent-green)";
             p2pBadge.style.color = "var(--accent-green)";
-          }
-        }
-
-        // Render Peer Table
-        const peerTbody = document.getElementById('peer-table-body');
-        if (peerTbody) {
-          if (data.peers && data.peers.length > 0) {
-            peerTbody.innerHTML = data.peers.map(p => `
-              <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                <td style="padding: 0.5rem; font-family: monospace; color: var(--accent-cyan);">${p.node_id.slice(0, 10)}...</td>
-                <td style="padding: 0.5rem; font-family: monospace;">${p.endpoint}</td>
-                <td style="padding: 0.5rem; color: var(--accent-green); font-weight: bold;">${p.latency_ms} ms</td>
-                <td style="padding: 0.5rem;"><span class="badge-spirit" style="font-size: 0.7rem;">실시간 동기화</span></td>
-              </tr>
-            `).join('');
-          } else {
-            peerTbody.innerHTML = `<tr><td colspan="4" style="padding: 1rem; text-align: center; color: var(--text-muted);">연결 대기 중입니다. 같은 Wi-Fi의 다른 PC에서 Aether Node를 실행하면 <b>UDP 비콘으로 자동 감지</b>되거나, 위 입력창에 상대방 IP를 입력해 연결할 수 있습니다.</td></tr>`;
           }
         }
       } catch (e) {
@@ -1242,12 +1238,386 @@
       }
     }
 
+    // P2P Live Network Topology Graph State & Renderer
+    const p2pCanvas = document.getElementById('p2p-topology-canvas');
+    const p2pCtx = p2pCanvas ? p2pCanvas.getContext('2d') : null;
+    const p2pTooltip = document.getElementById('p2p-tooltip');
+
+    let p2pData = {
+      myNodeId: null,
+      round: 1,
+      peers: []
+    };
+
+    const gossipParticles = [];
+    let radarAngle = 0;
+    let radarRipples = [
+      { r: 20, maxR: 120 },
+      { r: 60, maxR: 120 },
+      { r: 100, maxR: 120 }
+    ];
+    let hoveredElement = null;
+
+    function resizeP2PCanvas() {
+      if (!p2pCanvas || !p2pCtx) return;
+      const rect = p2pCanvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      p2pCanvas.width = rect.width * dpr;
+      p2pCanvas.height = rect.height * dpr;
+      p2pCtx.resetTransform && p2pCtx.resetTransform();
+      p2pCtx.scale(dpr, dpr);
+    }
+    window.addEventListener('resize', resizeP2PCanvas);
+    setTimeout(resizeP2PCanvas, 100);
+
+    // Mouse interaction for P2P Graph Tooltip
+    if (p2pCanvas) {
+      p2pCanvas.addEventListener('mousemove', (e) => {
+        const rect = p2pCanvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        const hit = checkP2PHit(mx, my, rect.width, rect.height);
+        hoveredElement = hit;
+
+        if (hit && p2pTooltip) {
+          p2pTooltip.style.display = 'block';
+          p2pTooltip.style.left = `${Math.min(mx + 15, rect.width - 250)}px`;
+          p2pTooltip.style.top = `${Math.max(10, my - 70)}px`;
+          p2pTooltip.innerHTML = hit.tooltipHtml;
+        } else if (p2pTooltip) {
+          p2pTooltip.style.display = 'none';
+        }
+      });
+
+      p2pCanvas.addEventListener('mouseleave', () => {
+        hoveredElement = null;
+        if (p2pTooltip) p2pTooltip.style.display = 'none';
+      });
+    }
+
+    function checkP2PHit(mx, my, w, h) {
+      const cx = w / 2;
+      const cy = h / 2;
+
+      // Check Core Node
+      if (Math.hypot(mx - cx, my - cy) <= 24) {
+        return {
+          type: 'core',
+          tooltipHtml: `
+            <div style="font-weight: bold; color: var(--accent-cyan); margin-bottom: 4px;">💎 내 주권 노드 (Core Node)</div>
+            <div style="color: #cbd5e1; font-family: monospace; font-size: 0.72rem; word-break: break-all;">URI: aether://${p2pData.myNodeId || 'local'}</div>
+            <div style="margin-top: 5px; color: #94a3b8; font-size: 0.72rem;">• 역할: 블록 생성 & DAG 합의 완결자</div>
+            <div style="color: #94a3b8; font-size: 0.72rem;">• 합의 라운드: <b>Round #${p2pData.round}</b></div>
+            <div style="color: var(--accent-green); font-size: 0.72rem;">• 상태: 무결성 주권 검증 중 (100% 정상)</div>
+          `
+        };
+      }
+
+      // Check Orbiting Peers
+      const peers = p2pData.peers || [];
+      if (peers.length > 0) {
+        const orbitRx = Math.min(w * 0.38, 260);
+        const orbitRy = Math.min(h * 0.34, 100);
+        for (let i = 0; i < peers.length; i++) {
+          const angle = (i * 2 * Math.PI / peers.length) - (Math.PI / 2);
+          const px = cx + orbitRx * Math.cos(angle);
+          const py = cy + orbitRy * Math.sin(angle);
+          if (Math.hypot(mx - px, my - py) <= 18) {
+            const p = peers[i];
+            return {
+              type: 'peer',
+              index: i,
+              tooltipHtml: `
+                <div style="font-weight: bold; color: var(--accent-green); margin-bottom: 4px;">🌐 분산 피어 노드 #${i + 1}</div>
+                <div style="color: #cbd5e1; font-family: monospace; font-size: 0.72rem; word-break: break-all;">URI: aether://${p.node_id}</div>
+                <div style="margin-top: 5px; color: #94a3b8; font-size: 0.72rem;">• 지연 시간(Ping): <b style="color: var(--accent-green);">${p.latency_ms} ms</b></div>
+                <div style="color: #94a3b8; font-size: 0.72rem;">• 합의 동기화: Round #${p.round || p2pData.round} (동기화 완료)</div>
+                <div style="color: var(--accent-cyan); font-size: 0.72rem;">• 연결망: 양방향 가십(Gossip) 메시 링크 활성</div>
+              `
+            };
+          }
+        }
+      }
+      return null;
+    }
+
+    function drawP2PTopology() {
+      if (!p2pCanvas || !p2pCtx) return;
+      const rect = p2pCanvas.getBoundingClientRect();
+      const w = rect.width;
+      const h = rect.height;
+      if (w === 0 || h === 0) return;
+
+      p2pCtx.clearRect(0, 0, w, h);
+
+      const cx = w / 2;
+      const cy = h / 2;
+      const peers = p2pData.peers || [];
+
+      // Grid background
+      p2pCtx.strokeStyle = 'rgba(56, 189, 248, 0.04)';
+      p2pCtx.lineWidth = 1;
+      const gridSize = 36;
+      for (let x = 0; x < w; x += gridSize) {
+        p2pCtx.beginPath();
+        p2pCtx.moveTo(x, 0);
+        p2pCtx.lineTo(x, h);
+        p2pCtx.stroke();
+      }
+      for (let y = 0; y < h; y += gridSize) {
+        p2pCtx.beginPath();
+        p2pCtx.moveTo(0, y);
+        p2pCtx.lineTo(w, y);
+        p2pCtx.stroke();
+      }
+
+      if (peers.length === 0) {
+        // --- 1. RADAR SCANNER MODE (Zero Peers) ---
+        radarAngle += 0.022;
+        if (radarAngle >= Math.PI * 2) radarAngle = 0;
+
+        // Sonar expanding ripples
+        for (let i = 0; i < radarRipples.length; i++) {
+          const rip = radarRipples[i];
+          rip.r += 0.35;
+          if (rip.r > rip.maxR) rip.r = 15;
+          const alpha = Math.max(0, (1 - rip.r / rip.maxR) * 0.35);
+
+          p2pCtx.beginPath();
+          p2pCtx.arc(cx, cy, rip.r, 0, Math.PI * 2);
+          p2pCtx.strokeStyle = `rgba(6, 182, 212, ${alpha})`;
+          p2pCtx.lineWidth = 1.2;
+          p2pCtx.stroke();
+        }
+
+        // Radar rotating sweep cone
+        const sweepGrad = p2pCtx.createRadialGradient(cx, cy, 10, cx, cy, 130);
+        sweepGrad.addColorStop(0, 'rgba(6, 182, 212, 0.28)');
+        sweepGrad.addColorStop(1, 'rgba(6, 182, 212, 0.0)');
+
+        p2pCtx.save();
+        p2pCtx.beginPath();
+        p2pCtx.moveTo(cx, cy);
+        p2pCtx.arc(cx, cy, 130, radarAngle, radarAngle + 0.42, false);
+        p2pCtx.closePath();
+        p2pCtx.fillStyle = sweepGrad;
+        p2pCtx.fill();
+        p2pCtx.restore();
+
+        // Orbit outline
+        p2pCtx.beginPath();
+        p2pCtx.ellipse(cx, cy, 130, 85, 0, 0, Math.PI * 2);
+        p2pCtx.setLineDash([4, 4]);
+        p2pCtx.strokeStyle = 'rgba(56, 189, 248, 0.18)';
+        p2pCtx.stroke();
+        p2pCtx.setLineDash([]);
+
+        // Status text
+        p2pCtx.fillStyle = 'rgba(203, 213, 225, 0.88)';
+        p2pCtx.font = '11px sans-serif';
+        p2pCtx.textAlign = 'center';
+        p2pCtx.fillText('📡 P2P 분산 메시망 자동 탐색 중 (UDP LAN Beacon 활성화)', cx, cy + 96);
+        p2pCtx.fillStyle = 'rgba(148, 163, 184, 0.65)';
+        p2pCtx.font = '10px sans-serif';
+        p2pCtx.fillText('같은 Wi-Fi / 네트워크의 다른 노드를 자동 감지하거나, 상단에서 피어 URI를 입력하세요', cx, cy + 114);
+
+      } else {
+        // --- 2. LIVE CONNECTED MESH TOPOLOGY MODE ---
+        const orbitRx = Math.min(w * 0.38, 260);
+        const orbitRy = Math.min(h * 0.34, 100);
+
+        // Orbit track
+        p2pCtx.beginPath();
+        p2pCtx.ellipse(cx, cy, orbitRx, orbitRy, 0, 0, Math.PI * 2);
+        p2pCtx.strokeStyle = 'rgba(56, 189, 248, 0.15)';
+        p2pCtx.setLineDash([3, 5]);
+        p2pCtx.stroke();
+        p2pCtx.setLineDash([]);
+
+        // Compute peer positions
+        const peerPos = peers.map((p, i) => {
+          const angle = (i * 2 * Math.PI / peers.length) - (Math.PI / 2);
+          return {
+            x: cx + orbitRx * Math.cos(angle),
+            y: cy + orbitRy * Math.sin(angle),
+            peer: p
+          };
+        });
+
+        // Peer-to-peer mesh links
+        if (peers.length > 1) {
+          p2pCtx.strokeStyle = 'rgba(16, 185, 129, 0.15)';
+          p2pCtx.lineWidth = 1;
+          p2pCtx.setLineDash([2, 4]);
+          for (let i = 0; i < peerPos.length; i++) {
+            const next = (i + 1) % peerPos.length;
+            p2pCtx.beginPath();
+            p2pCtx.moveTo(peerPos[i].x, peerPos[i].y);
+            p2pCtx.lineTo(peerPos[next].x, peerPos[next].y);
+            p2pCtx.stroke();
+          }
+          p2pCtx.setLineDash([]);
+        }
+
+        // Links between Core and Peers
+        peerPos.forEach((pos) => {
+          const grad = p2pCtx.createLinearGradient(cx, cy, pos.x, pos.y);
+          grad.addColorStop(0, 'rgba(6, 182, 212, 0.75)');
+          grad.addColorStop(1, 'rgba(16, 185, 129, 0.75)');
+
+          p2pCtx.beginPath();
+          p2pCtx.moveTo(cx, cy);
+          p2pCtx.lineTo(pos.x, pos.y);
+          p2pCtx.strokeStyle = grad;
+          p2pCtx.lineWidth = 1.6;
+          p2pCtx.stroke();
+
+          // Latency badge at midpoint
+          const midX = (cx + pos.x) / 2;
+          const midY = (cy + pos.y) / 2;
+          p2pCtx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+          p2pCtx.strokeStyle = 'rgba(16, 185, 129, 0.5)';
+          p2pCtx.lineWidth = 1;
+          p2pCtx.beginPath();
+          p2pCtx.roundRect(midX - 22, midY - 9, 44, 18, 4);
+          p2pCtx.fill();
+          p2pCtx.stroke();
+
+          p2pCtx.fillStyle = 'var(--accent-green)';
+          p2pCtx.font = 'bold 9px monospace';
+          p2pCtx.textAlign = 'center';
+          p2pCtx.textBaseline = 'middle';
+          p2pCtx.fillText(`${pos.peer.latency_ms}ms`, midX, midY);
+        });
+
+        // Spawn Gossip particles
+        if (Math.random() < 0.18) {
+          const targetIdx = Math.floor(Math.random() * peerPos.length);
+          const out = Math.random() > 0.5;
+          gossipParticles.push({
+            peerIdx: targetIdx,
+            progress: out ? 0 : 1,
+            speed: (out ? 1 : -1) * (0.012 + Math.random() * 0.016),
+            color: Math.random() > 0.35 ? '#f59e0b' : '#38bdf8'
+          });
+        }
+
+        // Update & Render Gossip Particles
+        for (let i = gossipParticles.length - 1; i >= 0; i--) {
+          const pt = gossipParticles[i];
+          pt.progress += pt.speed;
+          if (pt.progress > 1 || pt.progress < 0) {
+            gossipParticles.splice(i, 1);
+            continue;
+          }
+
+          const targetPos = peerPos[pt.peerIdx];
+          if (!targetPos) {
+            gossipParticles.splice(i, 1);
+            continue;
+          }
+
+          const px = cx + (targetPos.x - cx) * pt.progress;
+          const py = cy + (targetPos.y - cy) * pt.progress;
+
+          p2pCtx.beginPath();
+          p2pCtx.arc(px, py, 3.5, 0, Math.PI * 2);
+          p2pCtx.fillStyle = pt.color;
+          p2pCtx.shadowColor = pt.color;
+          p2pCtx.shadowBlur = 8;
+          p2pCtx.fill();
+          p2pCtx.shadowBlur = 0;
+        }
+
+        // Render Peer Nodes
+        peerPos.forEach((pos, idx) => {
+          const isHover = hoveredElement && hoveredElement.type === 'peer' && hoveredElement.index === idx;
+          const r = isHover ? 14 : 11;
+
+          // Halo glow
+          p2pCtx.beginPath();
+          p2pCtx.arc(pos.x, pos.y, r + 5, 0, Math.PI * 2);
+          p2pCtx.fillStyle = 'rgba(16, 185, 129, 0.25)';
+          p2pCtx.fill();
+
+          // Node body
+          p2pCtx.beginPath();
+          p2pCtx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
+          p2pCtx.fillStyle = '#10b981';
+          p2pCtx.shadowColor = '#10b981';
+          p2pCtx.shadowBlur = 10;
+          p2pCtx.fill();
+          p2pCtx.shadowBlur = 0;
+
+          // Specular highlight
+          p2pCtx.beginPath();
+          p2pCtx.arc(pos.x - 2, pos.y - 2, r * 0.4, 0, Math.PI * 2);
+          p2pCtx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+          p2pCtx.fill();
+
+          // Node URI text
+          p2pCtx.fillStyle = '#e2e8f0';
+          p2pCtx.font = '10px monospace';
+          p2pCtx.textAlign = 'center';
+          p2pCtx.textBaseline = 'top';
+          const shortId = pos.peer.node_id ? `aether://${pos.peer.node_id.slice(0, 6)}...` : 'Peer';
+          p2pCtx.fillText(shortId, pos.x, pos.y + r + 4);
+        });
+      }
+
+      // --- 3. RENDER CENTRAL CORE NODE ---
+      const isCoreHover = hoveredElement && hoveredElement.type === 'core';
+      const coreR = isCoreHover ? 18 : 15;
+
+      // Pulsing outer aura
+      const pulse = Math.sin(Date.now() / 380) * 4;
+      p2pCtx.beginPath();
+      p2pCtx.arc(cx, cy, coreR + 8 + pulse, 0, Math.PI * 2);
+      p2pCtx.fillStyle = 'rgba(6, 182, 212, 0.22)';
+      p2pCtx.fill();
+
+      // Core body
+      p2pCtx.beginPath();
+      p2pCtx.arc(cx, cy, coreR, 0, Math.PI * 2);
+      p2pCtx.fillStyle = '#06b6d4';
+      p2pCtx.shadowColor = '#06b6d4';
+      p2pCtx.shadowBlur = 16;
+      p2pCtx.fill();
+      p2pCtx.shadowBlur = 0;
+
+      // Core highlight
+      p2pCtx.beginPath();
+      p2pCtx.arc(cx - 3, cy - 3, coreR * 0.45, 0, Math.PI * 2);
+      p2pCtx.fillStyle = '#ffffff';
+      p2pCtx.fill();
+
+      // Core label
+      p2pCtx.fillStyle = 'var(--accent-cyan)';
+      p2pCtx.font = 'bold 10px sans-serif';
+      p2pCtx.textAlign = 'center';
+      p2pCtx.textBaseline = 'top';
+      p2pCtx.fillText('Core (You)', cx, cy + coreR + 6);
+
+      p2pCtx.fillStyle = 'rgba(148, 163, 184, 0.85)';
+      p2pCtx.font = '9px monospace';
+      const myIdShort = p2pData.myNodeId ? `aether://${p2pData.myNodeId.slice(0, 6)}...` : '';
+      p2pCtx.fillText(myIdShort, cx, cy + coreR + 18);
+    }
+
+    // P2P 60 FPS animation loop
+    function p2pAnimationLoop() {
+      drawP2PTopology();
+      requestAnimationFrame(p2pAnimationLoop);
+    }
+    requestAnimationFrame(p2pAnimationLoop);
+
     // P2P Copy & Connect Event Listeners
     document.addEventListener('DOMContentLoaded', () => {
       const copyBtn = document.getElementById('btn-copy-endpoint');
       if (copyBtn) {
         copyBtn.addEventListener('click', () => {
-          const ep = document.getElementById('my-p2p-endpoint').innerText;
+          const myEpEl = document.getElementById('my-p2p-endpoint');
+          const ep = (myEpEl && myEpEl.dataset.fullUri) ? myEpEl.dataset.fullUri : (myEpEl ? myEpEl.innerText : '');
           navigator.clipboard.writeText(ep).then(() => {
             copyBtn.innerText = "복사됨! ✔";
             setTimeout(() => { copyBtn.innerText = "복사"; }, 2000);
@@ -1280,10 +1650,10 @@
             if (data.status === "connected") {
               if (msgEl) {
                 msgEl.style.color = "var(--accent-green)";
-                msgEl.innerText = `✔ 피어(${peer}) 연결 및 전체 상태 동기화 성공!`;
+                msgEl.innerText = `✔ 피어 연결 및 전체 상태 동기화 성공! (지연 속도: ${data.peer.latency_ms}ms)`;
               }
               inputEl.value = "";
-              fetchStatus();
+              await fetchStatus();
             } else {
               if (msgEl) {
                 msgEl.style.color = "var(--accent-red)";

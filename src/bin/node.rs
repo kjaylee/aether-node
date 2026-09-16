@@ -561,6 +561,7 @@ fn handle_connection(mut stream: TcpStream, state: Arc<RwLock<NodeState>>) {
             "balance": balance,
             "total_rewards": s.total_rewards,
             "cores": rayon::current_num_threads(),
+            "node_uri": format!("aether://{}", s.identity.node_id),
             "local_ip": s.local_ip,
             "port": s.port,
             "peer_count": peers.len(),
@@ -939,17 +940,16 @@ fn main() {
     let listener = listener.expect("네트워크 포트 바인딩에 실패했습니다");
     let local_ip = get_local_ip();
     let local_url = format!("http://127.0.0.1:{}", port);
-    let lan_url = format!("http://{}:{}", local_ip, port);
 
     // Initialize Persistent Node Identity & Peer Manager
     let identity = load_or_create_identity(port);
     let peer_mgr = PeerManager::new(identity.clone(), port);
 
     println!(" \x1b[1;32m✔ Aether Sovereign Node 데몬 가동 완료!\x1b[0m");
-    println!(" [내 노드 ID] \x1b[1;35m{}\x1b[0m ({})", identity.node_id, identity.name);
-    println!(" [내 지갑 주소] \x1b[1;33m{}\x1b[0m", identity.address.to_hex());
-    println!(" [로컬 접속 주소] \x1b[1;36m{}\x1b[0m", local_url);
-    println!(" [P2P LAN 주소]   \x1b[1;32m{}\x1b[0m (다른 PC에서 이 주소로 연결 가능)", lan_url);
+    println!(" [내 노드 URI]   \x1b[1;35maether://{}\x1b[0m ({})", identity.node_id, identity.name);
+    println!(" [내 지갑 주소]   \x1b[1;33m{}\x1b[0m", identity.address.to_hex());
+    println!(" [대시보드 접속] \x1b[1;36m{}\x1b[0m", local_url);
+    println!(" [P2P 엔드포인트] \x1b[1;32maether://{}@{}:{}\x1b[0m", identity.node_id, local_ip, port);
     println!("\x1b[1;36m================================================================================\x1b[0m");
 
     // Start LAN UDP Beacon Auto-Discovery

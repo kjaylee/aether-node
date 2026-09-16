@@ -70,7 +70,16 @@ impl PeerManager {
     }
 
     pub fn connect_peer(&self, remote_endpoint: &str) -> Result<PeerInfo, String> {
-        let trimmed = remote_endpoint.trim().trim_start_matches("http://");
+        let mut trimmed = remote_endpoint.trim();
+        // Support standard aether://<node_id>@<host>:<port> or aether://<host>:<port>
+        if let Some(rest) = trimmed.strip_prefix("aether://") {
+            if let Some(idx) = rest.rfind('@') {
+                trimmed = &rest[idx + 1..];
+            } else {
+                trimmed = rest;
+            }
+        }
+        let trimmed = trimmed.trim_start_matches("http://");
         if trimmed.is_empty() {
             return Err("빈 피어 주소입니다".to_string());
         }
