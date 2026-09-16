@@ -3,7 +3,8 @@ use aether_core::crypto::ThresholdScheme;
 use aether_core::execution::{BlockSTMExecutor, SequentialExecutor};
 use aether_core::mempool::EncryptedMempool;
 use aether_core::p2p::{
-    get_local_ip, http_get, start_lan_auto_discovery, start_nat_traversal, PeerManager,
+    get_local_ip, http_get, start_bootnode_discovery, start_lan_auto_discovery,
+    start_nat_traversal, PeerManager,
 };
 use aether_core::storage::FlatStateStore;
 use aether_core::types::{
@@ -960,6 +961,9 @@ fn main() {
 
     // Start Router NAT Traversal (UPnP IGD port forwarding & STUN)
     start_nat_traversal(peer_mgr.clone(), local_ip.clone(), port);
+
+    // Automatically peer with primary seed bootnode
+    start_bootnode_discovery(peer_mgr.clone());
 
     // If --peer argument was given, connect immediately
     if let Some(peer_addr) = connect_peer_arg {

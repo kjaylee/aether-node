@@ -123,6 +123,10 @@ impl PeerManager {
         let remote_ident: NodeIdentity =
             serde_json::from_str(&res).map_err(|e| format!("응답 해석 실패: {}", e))?;
 
+        if remote_ident.node_id == self.my_identity.node_id {
+            return Err("자기 자신 노드입니다".to_string());
+        }
+
         let peer_info = PeerInfo {
             node_id: remote_ident.node_id,
             address: remote_ident.address,
@@ -480,3 +484,27 @@ pub fn start_nat_traversal(peer_mgr: PeerManager, local_ip: String, port: u16) {
         peer_mgr.set_nat_info(info);
     });
 }
+
+/// Primary Bootnode Seed List (Public WAN and LAN fallbacks)
+pub const DEFAULT_BOOTNODES: &[&str] = &[
+    "14.32.162.195:8080", // Jay's Sovereign Seed Node (Public WAN UPnP)
+    "192.168.0.4:8080",   // LAN fallback
+];
+
+/// Automatically connect to seed bootnodes upon startup
+pub fn start_bootnode_discovery(peer_mgr: PeerManager) {
+    thread::spawn(move || {
+        // Wait 1.5s for local TCP server to start
+        thread::sleep(Duration::from_millis(1500));
+        for &seed in DEFAULT_BOOTNODES {
+            if peer_mgr.contains_endpoint(seed) {
+                continue;
+            }
+            if let Ok(info) = peer_mgr.connect_peer(seed) {
+                println!(" \x1b[1;32m✔ [부트노드 자동 피어링]\x1b[0m 시드 노드({}: {}) 연결 성공!", seed, info.node_id);
+                break;
+            }
+        }
+    });
+}
+
