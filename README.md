@@ -7,6 +7,11 @@
 [![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Linux%20%7C%20Windows-green.svg)](https://github.com)
 [![TPS](https://img.shields.io/badge/Throughput-134%2C959%20TPS-brightgreen.svg)](#실측-성능-벤치마크)
 [![RAM Footprint](https://img.shields.io/badge/RAM%20Usage-~38MB-blueviolet.svg)](#비트코인-정신과-주권-노드)
+[![Legal Disclaimer](https://img.shields.io/badge/Legal-Disclaimer%20%26%20Terms-red.svg)](DISCLAIMER.md)
+
+> [!IMPORTANT]
+> **Legal Notice & Terms of Use (Summary):**  
+> Aether Node is an experimental, non-commercial open-source peer-to-peer research software. It uses open-standard BitTorrent Mainline DHT (BEP 5) **strictly and solely for decentralized peer address discovery (zero copyrighted files, media, or torrent data are stored, transmitted, or indexed)**. All tokens (AETH) and validator rewards are simulated computational test artifacts possessing zero monetary value. Provided **"AS IS"** without warranties of any kind. By using this software, you agree to the complete terms and limitation of liability in [DISCLAIMER.md](DISCLAIMER.md).
 
 ---
 

@@ -1092,12 +1092,96 @@
     <div>
       <strong>Aether Core</strong> (Rust) • 100% 오픈소스 분산 원장 • <i>"Not your node, not your rules"</i>
     </div>
-    <div>
-      HTTP RPC: <code>http://127.0.0.1:8080</code>
+    <div style="display: flex; gap: 1.5rem; align-items: center;">
+      <span>HTTP RPC: <code>http://127.0.0.1:8080</code></span>
+      <a href="#" id="link-open-legal" style="color: #38bdf8; text-decoration: none; font-size: 0.75rem; border-bottom: 1px dotted #38bdf8;">⚖️ Legal Disclaimer & Terms</a>
     </div>
   </footer>
 
+  <!-- Legal Disclaimer & Terms of Use Modal -->
+  <div id="legal-modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px); z-index: 99999; justify-content: center; align-items: center; padding: 1rem;">
+    <div style="background: #0d131f; border: 1px solid #1e293b; border-radius: 12px; max-width: 680px; width: 100%; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7); overflow: hidden;">
+      <!-- Modal Header -->
+      <div style="padding: 1.25rem 1.5rem; border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; background: rgba(15, 23, 42, 0.8);">
+        <div style="display: flex; align-items: center; gap: 0.6rem;">
+          <span style="font-size: 1.25rem;">⚖️</span>
+          <b style="font-size: 1.05rem; color: #fff; letter-spacing: -0.01em;">Aether Node: Legal Disclaimer & Terms of Use</b>
+        </div>
+        <span style="font-size: 0.75rem; background: rgba(56, 189, 248, 0.1); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.2); padding: 0.2rem 0.5rem; border-radius: 4px;">Open-Source Research</span>
+      </div>
+
+      <!-- Modal Body (Scrollable) -->
+      <div style="padding: 1.25rem 1.5rem; overflow-y: auto; font-size: 0.82rem; line-height: 1.6; color: #cbd5e1; flex: 1;">
+        <p style="margin-bottom: 1rem; color: #94a3b8;">
+          Please read this Legal Notice carefully before running or interacting with Aether Node. By using this software, you confirm your acceptance of the terms and liability waivers below.
+        </p>
+
+        <div style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 0.85rem 1rem; margin-bottom: 0.85rem;">
+          <strong style="color: #38bdf8; display: block; margin-bottom: 0.25rem;">1. Non-Commercial & Experimental Research Software</strong>
+          Aether Node is an experimental, non-commercial open-source peer-to-peer research software for distributed ledger technology. It is provided strictly for educational and technical validation purposes.
+        </div>
+
+        <div style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 0.85rem 1rem; margin-bottom: 0.85rem;">
+          <strong style="color: #38bdf8; display: block; margin-bottom: 0.25rem;">2. No Financial Assets or Investment Advice (Zero Monetary Value)</strong>
+          All computational units, balances, smart contracts, and rewards ("AETH") are simulated test artifacts possessing <b>zero monetary value</b>. The software does not constitute a financial product, securities offering, or banking service. No economic return is promised or implied.
+        </div>
+
+        <div style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 0.85rem 1rem; margin-bottom: 0.85rem;">
+          <strong style="color: #38bdf8; display: block; margin-bottom: 0.25rem;">3. BitTorrent Mainline DHT Protocol (Zero Copyrighted Content)</strong>
+          The software utilizes the public BitTorrent Mainline DHT (BEP 5) protocol <b>strictly for decentralized peer IP/port address discovery</b>. The software <b>does not</b> download, upload, store, index, or distribute any copyrighted media or files.
+        </div>
+
+        <div style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 0.85rem 1rem; margin-bottom: 0.85rem;">
+          <strong style="color: #38bdf8; display: block; margin-bottom: 0.25rem;">4. Disclaimer of Warranties & Limitation of Liability ("AS IS")</strong>
+          THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. IN NO EVENT SHALL THE AUTHORS, CONTRIBUTORS, OR SIGNING ENTITIES (INCLUDING <b>PIPLN</b> AND PROJECT COLLABORATORS) BE LIABLE FOR ANY CLAIM, DAMAGES, LOSS OF DATA, NETWORK COSTS, OR OTHER LIABILITIES ARISING FROM THE USE OF THE SOFTWARE.
+        </div>
+
+        <details style="margin-top: 0.5rem; font-size: 0.78rem; color: #94a3b8; cursor: pointer;">
+          <summary style="font-weight: bold; color: #cbd5e1; margin-bottom: 0.5rem;">🇰🇷 국문 요약본 보기 (Korean Summary)</summary>
+          <div style="padding-left: 0.5rem; border-left: 2px solid #38bdf8; line-height: 1.5; margin-top: 0.35rem;">
+            • 본 소프트웨어는 비상업적 오픈소스 분산 원장 연구용 프로그램입니다.<br/>
+            • 표시되는 모든 보상(AETH) 및 토큰은 테스트용 컴퓨팅 데이터이며, 어떠한 금전적 가치도 없습니다.<br/>
+            • BitTorrent DHT는 피어 IP 주소 교환용으로만 사용되며, 어떠한 저작권 저작물도 송수신하지 않습니다.<br/>
+            • 소프트웨어는 "있는 그대로(AS IS)" 제공되며, 개발자 및 서명 주체(Pipln)는 일체의 손해배상 책임을 지지 않습니다.
+          </div>
+        </details>
+      </div>
+
+      <!-- Modal Footer -->
+      <div style="padding: 1rem 1.5rem; border-top: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; background: rgba(15, 23, 42, 0.9);">
+        <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.78rem; color: #94a3b8; cursor: pointer;">
+          <input type="checkbox" id="chk-legal-consent" style="accent-color: #38bdf8;" checked />
+          I understand and agree to the Terms of Use & Liability Waiver
+        </label>
+        <button id="btn-accept-legal" class="btn" style="background: linear-gradient(135deg, #38bdf8, #0284c7); color: #000; font-weight: bold; padding: 0.5rem 1.25rem; font-size: 0.85rem; border: none; border-radius: 6px; cursor: pointer;">
+          Accept & Launch Node
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
+    // Legal Disclaimer Modal logic
+    const legalOverlay = document.getElementById('legal-modal-overlay');
+    const btnAcceptLegal = document.getElementById('btn-accept-legal');
+    const linkOpenLegal = document.getElementById('link-open-legal');
+
+    if (!localStorage.getItem('aether_disclaimer_accepted_v1')) {
+      legalOverlay.style.display = 'flex';
+    }
+
+    btnAcceptLegal.addEventListener('click', () => {
+      localStorage.setItem('aether_disclaimer_accepted_v1', 'true');
+      legalOverlay.style.display = 'none';
+    });
+
+    if (linkOpenLegal) {
+      linkOpenLegal.addEventListener('click', (e) => {
+        e.preventDefault();
+        legalOverlay.style.display = 'flex';
+      });
+    }
+
     // Mode Switching
     const simpleView = document.getElementById('simple-view');
     const proView = document.getElementById('pro-view');
