@@ -396,17 +396,19 @@ fn handle_connection(mut stream: TcpStream, state: Arc<RwLock<NodeState>>) {
 
                 let my_ident = {
                     let s = state.read();
-                    s.peer_mgr.add_or_update(PeerInfo {
-                        node_id: hs.identity.node_id.clone(),
-                        address: hs.identity.address,
-                        endpoint: remote_endpoint,
-                        last_seen_ms: SystemTime::now()
-                            .duration_since(UNIX_EPOCH)
-                            .unwrap_or_default()
-                            .as_millis() as u64,
-                        latency_ms: 2,
-                        round: 0,
-                    });
+                    if hs.identity.node_id != s.identity.node_id {
+                        s.peer_mgr.add_or_update(PeerInfo {
+                            node_id: hs.identity.node_id.clone(),
+                            address: hs.identity.address,
+                            endpoint: remote_endpoint,
+                            last_seen_ms: SystemTime::now()
+                                .duration_since(UNIX_EPOCH)
+                                .unwrap_or_default()
+                                .as_millis() as u64,
+                            latency_ms: 2,
+                            round: 0,
+                        });
+                    }
                     s.identity.clone()
                 };
 
