@@ -2,7 +2,9 @@ use aether_core::consensus::DagEngine;
 use aether_core::crypto::ThresholdScheme;
 use aether_core::execution::{BlockSTMExecutor, SequentialExecutor};
 use aether_core::mempool::EncryptedMempool;
-use aether_core::p2p::{get_local_ip, http_get, start_lan_auto_discovery, PeerManager};
+use aether_core::p2p::{
+    get_local_ip, http_get, start_lan_auto_discovery, start_nat_traversal, PeerManager,
+};
 use aether_core::storage::FlatStateStore;
 use aether_core::types::{
     hex, Address, GossipMessage, Hash256, NodeIdentity, PeerInfo, SyncResponse, Transaction,
@@ -564,6 +566,7 @@ fn handle_connection(mut stream: TcpStream, state: Arc<RwLock<NodeState>>) {
             "node_uri": format!("aether://{}", s.identity.node_id),
             "local_ip": s.local_ip,
             "port": s.port,
+            "nat": s.peer_mgr.get_nat_info(),
             "peer_count": peers.len(),
             "peers": peers
         });
@@ -954,6 +957,9 @@ fn main() {
 
     // Start LAN UDP Beacon Auto-Discovery
     start_lan_auto_discovery(peer_mgr.clone(), port);
+
+    // Start Router NAT Traversal (UPnP IGD port forwarding & STUN)
+    start_nat_traversal(peer_mgr.clone(), local_ip.clone(), port);
 
     // If --peer argument was given, connect immediately
     if let Some(peer_addr) = connect_peer_arg {

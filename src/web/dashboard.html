@@ -1189,6 +1189,7 @@
           p2pData.myNodeId = data.node_id;
           p2pData.round = data.round || 1;
           p2pData.peers = data.peers || [];
+          p2pData.nat = data.nat || null;
 
           const valNodeIdEl = document.getElementById('val-node-id');
           if (valNodeIdEl) {
@@ -1200,10 +1201,13 @@
           if (myEpEl) {
             myEpEl.innerText = `aether://${data.node_id.slice(0, 8)}...${data.node_id.slice(-4)}`;
             myEpEl.title = `aether://${data.node_id}`;
-            myEpEl.dataset.fullUri = (data.local_ip && data.port) ? `aether://${data.node_id}@${data.local_ip}:${data.port}` : `aether://${data.node_id}`;
+            const hostIp = (data.nat && data.nat.is_opened && data.nat.external_ip) ? data.nat.external_ip : (data.local_ip || '127.0.0.1');
+            const hostPort = (data.nat && data.nat.is_opened && data.nat.external_port) ? data.nat.external_port : (data.port || 8080);
+            myEpEl.dataset.fullUri = `aether://${data.node_id}@${hostIp}:${hostPort}`;
           }
         } else {
           p2pData.peers = data.peers || [];
+          p2pData.nat = data.nat || null;
         }
 
         const simpleRewardEl = document.getElementById('simple-reward');
@@ -1218,11 +1222,17 @@
 
         if (peerCount === 0) {
           if (statusTitle) statusTitle.innerText = "내 컴퓨터가 단독 주권 노드로 검증 중입니다";
-          if (statusSub) statusSub.innerHTML = `로컬 P2P 메시망 가동 중 • 다른 PC나 VM의 Aether Node를 자동 감지하거나 피어 URI를 연결할 수 있습니다.`;
+          if (statusSub) {
+            if (data.nat && data.nat.is_opened && data.nat.external_ip) {
+              statusSub.innerHTML = `공유기(NAT) 자동 우회 완료 • 공인망(${data.nat.external_ip}) P2P 엔드포인트 활성화됨`;
+            } else {
+              statusSub.innerHTML = `로컬 P2P 메시망 가동 중 • 다른 PC나 VM의 Aether Node를 자동 감지하거나 피어 URI를 연결할 수 있습니다.`;
+            }
+          }
           if (p2pBadge) {
-            p2pBadge.innerText = "단독 주권 가동";
-            p2pBadge.style.borderColor = "var(--accent-orange)";
-            p2pBadge.style.color = "var(--accent-orange)";
+            p2pBadge.innerText = (data.nat && data.nat.is_opened) ? "공인망 개방됨" : "단독 주권 가동";
+            p2pBadge.style.borderColor = (data.nat && data.nat.is_opened) ? "var(--accent-green)" : "var(--accent-orange)";
+            p2pBadge.style.color = (data.nat && data.nat.is_opened) ? "var(--accent-green)" : "var(--accent-orange)";
           }
         } else {
           if (statusTitle) statusTitle.innerText = `🌐 전 세계 분산 피어 ${peerCount}대와 실시간 동기화 중`;
@@ -1301,6 +1311,12 @@
 
       // Check Core Node
       if (Math.hypot(mx - cx, my - cy) <= 24) {
+        const natDesc = (p2pData.nat && p2pData.nat.is_opened && p2pData.nat.external_ip)
+          ? `<div style="color: var(--accent-green); font-size: 0.72rem;">• NAT 우회: ✔ ${p2pData.nat.method} (${p2pData.nat.external_ip}:${p2pData.nat.external_port})</div>`
+          : (p2pData.nat && p2pData.nat.external_ip)
+          ? `<div style="color: var(--accent-orange); font-size: 0.72rem;">• 공인 IP: ${p2pData.nat.external_ip} (${p2pData.nat.method})</div>`
+          : `<div style="color: #94a3b8; font-size: 0.72rem;">• 네트워크: LAN 로컬 메시망</div>`;
+
         return {
           type: 'core',
           tooltipHtml: `
@@ -1308,6 +1324,7 @@
             <div style="color: #cbd5e1; font-family: monospace; font-size: 0.72rem; word-break: break-all;">URI: aether://${p2pData.myNodeId || 'local'}</div>
             <div style="margin-top: 5px; color: #94a3b8; font-size: 0.72rem;">• 역할: 블록 생성 & DAG 합의 완결자</div>
             <div style="color: #94a3b8; font-size: 0.72rem;">• 합의 라운드: <b>Round #${p2pData.round}</b></div>
+            ${natDesc}
             <div style="color: var(--accent-green); font-size: 0.72rem;">• 상태: 무결성 주권 검증 중 (100% 정상)</div>
           `
         };
