@@ -165,8 +165,48 @@ pub struct ContractInfo {
     pub created_at_round: u64,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct NodeIdentity {
+    pub node_id: String,
+    pub address: Address,
+    pub name: String,
+    pub created_at: u64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct PeerInfo {
+    pub node_id: String,
+    pub address: Address,
+    pub endpoint: String,
+    pub last_seen_ms: u64,
+    pub latency_ms: u64,
+    pub round: u64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum GossipMessage {
+    NewTx(Transaction),
+    NewVertex(Vertex),
+    Ping { node_id: String, round: u64 },
+    Pong { node_id: String, round: u64 },
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SyncRequest {
+    pub from_round: u64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SyncResponse {
+    pub latest_round: u64,
+    pub vertices: Vec<Vertex>,
+    pub contracts: Vec<ContractInfo>,
+    pub contract_slots: Vec<(Address, u64, u64)>,
+}
+
 pub mod hex {
     pub fn encode(bytes: &[u8]) -> String {
         bytes.iter().map(|b| format!("{:02x}", b)).collect()
     }
 }
+

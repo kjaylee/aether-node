@@ -677,9 +677,9 @@
         </div>
 
         <div>
-          <div class="status-text-title">내 컴퓨터가 네트워크를 정상 검증 중입니다</div>
-          <div class="status-text-sub">
-            공유기(사설망) 자동 우회 완료 • 전 세계 <b>38,421대</b>의 분산 피어와 실시간 동기화 중입니다.
+          <div class="status-text-title" id="simple-status-title">내 컴퓨터가 네트워크를 정상 검증 중입니다</div>
+          <div class="status-text-sub" id="simple-status-sub">
+            로컬 P2P 가동 완료 • 다른 PC나 VM을 연결하여 탈중앙 네트워크를 확장할 수 있습니다.
           </div>
         </div>
 
@@ -687,8 +687,8 @@
         <div class="reward-box">
           <div class="reward-item">
             <span class="reward-title">오늘 누적 검증 & MEV 배당 보상</span>
-            <span class="reward-num" id="simple-reward">+34.82 AETH</span>
-            <span class="reward-sub">≈ 약 $104.46 USD 가치 자동 적립 중</span>
+            <span class="reward-num" id="simple-reward">+0 AETH</span>
+            <span class="reward-sub">실시간 블록 앵커 완결 보상 적립 중</span>
           </div>
           <div class="reward-item">
             <span class="reward-title">내 지갑 총 잔고</span>
@@ -705,15 +705,59 @@
           </div>
           <div class="feature-card">
             <b>🛡️ 사설망 100% 자동 연결</b>
-            <p>공유기 포트포워딩 설정 불필요. 백그라운드에서 P2P 홀펀칭 자동 관통.</p>
+            <p>공유기 포트포워딩 불필요. 백그라운드 UDP 비콘으로 같은 Wi-Fi 내 노드 1초 자동 감지.</p>
           </div>
           <div class="feature-card">
             <b>💰 순수 100% 순이익</b>
-            <p>추가 전기세나 전용 장비 구매 $0. 평소 쓰던 컴퓨터로 매일 패시브 인컴 수령.</p>
+            <p>추가 전기세나 전용 장비 구매 $0. 평소 쓰던 컴퓨터로 매일 검증 보상 수령.</p>
           </div>
         </div>
 
-        <div style="display: flex; gap: 1rem; width: 100%; justify-content: center; flex-wrap: wrap;">
+        <!-- P2P Peer Network Hub Card -->
+        <div style="margin-top: 1.5rem; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px; padding: 1.25rem; width: 100%; box-shadow: 0 4px 20px rgba(0,0,0,0.4);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span style="font-size: 1.2rem;">🌐</span>
+              <b style="font-size: 1rem; color: #fff;">실시간 P2P 분산 피어 네트워크</b>
+              <span class="badge-spirit" id="p2p-badge-status" style="border-color: var(--accent-orange); color: var(--accent-orange);">단독 노드 가동 중</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; background: rgba(0,0,0,0.4); padding: 0.3rem 0.75rem; border-radius: 6px; border: 1px solid var(--border);">
+              <span style="font-size: 0.8rem; color: var(--text-muted);">내 P2P 주소:</span>
+              <code id="my-p2p-endpoint" style="color: var(--accent-cyan); font-weight: bold;">http://127.0.0.1:8080</code>
+              <button class="btn btn-secondary" id="btn-copy-endpoint" style="padding: 0.2rem 0.6rem; font-size: 0.75rem;">복사</button>
+            </div>
+          </div>
+
+          <!-- Peer Connect Form -->
+          <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
+            <input type="text" id="input-peer-endpoint" placeholder="상대방 PC 노드 주소 입력 (예: 192.168.0.25:8080 또는 127.0.0.1:8081)" style="flex: 1; background: rgba(0,0,0,0.5); border: 1px solid var(--border); border-radius: 6px; padding: 0.5rem 0.85rem; color: #fff; font-size: 0.85rem;" />
+            <button class="btn" id="btn-connect-peer" style="background: linear-gradient(135deg, var(--accent-cyan), #0284c7); color: #000; font-weight: bold; white-space: nowrap;">➕ 피어 연결</button>
+          </div>
+          <div id="peer-connect-msg" style="font-size: 0.8rem; margin-bottom: 0.75rem; display: none;"></div>
+
+          <!-- Connected Peers Table -->
+          <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
+              <thead>
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1); color: var(--text-muted); text-align: left;">
+                  <th style="padding: 0.5rem;">노드 ID</th>
+                  <th style="padding: 0.5rem;">네트워크 IP / Port</th>
+                  <th style="padding: 0.5rem;">응답 속도 (Latency)</th>
+                  <th style="padding: 0.5rem;">상태</th>
+                </tr>
+              </thead>
+              <tbody id="peer-table-body">
+                <tr>
+                  <td colspan="4" style="padding: 1rem; text-align: center; color: var(--text-muted);">
+                    연결 대기 중입니다. 같은 Wi-Fi의 다른 PC에서 Aether Node를 실행하면 <b>UDP 비콘으로 자동 감지</b>되거나, 위 입력창에 상대방 IP를 입력해 연결할 수 있습니다.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 1rem; width: 100%; justify-content: center; flex-wrap: wrap; margin-top: 1.5rem;">
           <button class="btn" id="btn-quick-claim" style="padding: 0.75rem 1.5rem; font-size: 0.95rem;">
             💳 내 지갑 관리 및 송금하기
           </button>
@@ -1137,10 +1181,128 @@
         document.getElementById('val-root').innerText = data.state_root;
         document.getElementById('my-balance').innerText = data.balance.toLocaleString();
         document.getElementById('simple-balance').innerText = `${data.balance.toLocaleString()} AETH`;
+
+        if (data.node_id) {
+          document.getElementById('val-node-id').innerText = `${data.node_id.slice(0, 6)}...${data.node_id.slice(-4)}`;
+          document.getElementById('val-node-id').title = data.node_id;
+        }
+
+        if (data.local_ip && data.port) {
+          const ep = `http://${data.local_ip}:${data.port}`;
+          const myEpEl = document.getElementById('my-p2p-endpoint');
+          if (myEpEl) myEpEl.innerText = ep;
+        }
+
+        const simpleRewardEl = document.getElementById('simple-reward');
+        if (simpleRewardEl) {
+          simpleRewardEl.innerText = `+${(data.total_rewards || 0).toLocaleString()} AETH`;
+        }
+
+        const peerCount = data.peer_count || 0;
+        const statusTitle = document.getElementById('simple-status-title');
+        const statusSub = document.getElementById('simple-status-sub');
+        const p2pBadge = document.getElementById('p2p-badge-status');
+
+        if (peerCount === 0) {
+          if (statusTitle) statusTitle.innerText = "내 컴퓨터가 단독 주권 노드로 검증 중입니다";
+          if (statusSub) statusSub.innerHTML = `로컬 P2P 가동 완료 • 다른 PC나 VM을 연결하여 탈중앙 네트워크를 확장할 수 있습니다.`;
+          if (p2pBadge) {
+            p2pBadge.innerText = "단독 노드 가동 중";
+            p2pBadge.style.borderColor = "var(--accent-orange)";
+            p2pBadge.style.color = "var(--accent-orange)";
+          }
+        } else {
+          if (statusTitle) statusTitle.innerText = `🌐 전 세계 분산 피어 ${peerCount}대와 실시간 동기화 중`;
+          if (statusSub) statusSub.innerHTML = `P2P 분산 합의 활성화됨 • 실시간 블록 및 스마트 계약 상태 완결 동기화 중입니다.`;
+          if (p2pBadge) {
+            p2pBadge.innerText = `피어 ${peerCount}대 연결됨`;
+            p2pBadge.style.borderColor = "var(--accent-green)";
+            p2pBadge.style.color = "var(--accent-green)";
+          }
+        }
+
+        // Render Peer Table
+        const peerTbody = document.getElementById('peer-table-body');
+        if (peerTbody) {
+          if (data.peers && data.peers.length > 0) {
+            peerTbody.innerHTML = data.peers.map(p => `
+              <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <td style="padding: 0.5rem; font-family: monospace; color: var(--accent-cyan);">${p.node_id.slice(0, 10)}...</td>
+                <td style="padding: 0.5rem; font-family: monospace;">${p.endpoint}</td>
+                <td style="padding: 0.5rem; color: var(--accent-green); font-weight: bold;">${p.latency_ms} ms</td>
+                <td style="padding: 0.5rem;"><span class="badge-spirit" style="font-size: 0.7rem;">실시간 동기화</span></td>
+              </tr>
+            `).join('');
+          } else {
+            peerTbody.innerHTML = `<tr><td colspan="4" style="padding: 1rem; text-align: center; color: var(--text-muted);">연결 대기 중입니다. 같은 Wi-Fi의 다른 PC에서 Aether Node를 실행하면 <b>UDP 비콘으로 자동 감지</b>되거나, 위 입력창에 상대방 IP를 입력해 연결할 수 있습니다.</td></tr>`;
+          }
+        }
       } catch (e) {
         console.error("status fetch error", e);
       }
     }
+
+    // P2P Copy & Connect Event Listeners
+    document.addEventListener('DOMContentLoaded', () => {
+      const copyBtn = document.getElementById('btn-copy-endpoint');
+      if (copyBtn) {
+        copyBtn.addEventListener('click', () => {
+          const ep = document.getElementById('my-p2p-endpoint').innerText;
+          navigator.clipboard.writeText(ep).then(() => {
+            copyBtn.innerText = "복사됨! ✔";
+            setTimeout(() => { copyBtn.innerText = "복사"; }, 2000);
+          });
+        });
+      }
+
+      const connectBtn = document.getElementById('btn-connect-peer');
+      const inputEl = document.getElementById('input-peer-endpoint');
+      const msgEl = document.getElementById('peer-connect-msg');
+      if (connectBtn && inputEl) {
+        connectBtn.addEventListener('click', async () => {
+          const peer = inputEl.value.trim();
+          if (!peer) return;
+          connectBtn.disabled = true;
+          connectBtn.innerText = "연결 중...";
+          if (msgEl) {
+            msgEl.style.display = "block";
+            msgEl.style.color = "var(--accent-cyan)";
+            msgEl.innerText = `${peer}로 P2P 핸드셰이크 시도 중...`;
+          }
+
+          try {
+            const res = await fetch('/api/p2p/connect', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ peer })
+            });
+            const data = await res.json();
+            if (data.status === "connected") {
+              if (msgEl) {
+                msgEl.style.color = "var(--accent-green)";
+                msgEl.innerText = `✔ 피어(${peer}) 연결 및 전체 상태 동기화 성공!`;
+              }
+              inputEl.value = "";
+              fetchStatus();
+            } else {
+              if (msgEl) {
+                msgEl.style.color = "var(--accent-red)";
+                msgEl.innerText = `❌ 연결 실패: ${data.message || "응답 없음"}`;
+              }
+            }
+          } catch (err) {
+            if (msgEl) {
+              msgEl.style.color = "var(--accent-red)";
+              msgEl.innerText = `❌ 연결 오류: ${err.message}`;
+            }
+          } finally {
+            connectBtn.disabled = false;
+            connectBtn.innerText = "➕ 피어 연결";
+          }
+        });
+      }
+    });
+
 
     // Draw DAG
     async function renderDAG() {

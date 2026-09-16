@@ -65,6 +65,16 @@ impl DagEngine {
         true
     }
 
+    pub fn get_all_vertices(&self) -> Vec<Vertex> {
+        let v_map = self.vertices.read();
+        v_map.values().cloned().collect()
+    }
+
+    pub fn get_current_round(&self) -> u64 {
+        *self.current_round.read()
+    }
+
+
     /// Elect an anchor for round `r`
     pub fn get_anchor_for_round(&self, round: u64) -> Option<Hash256> {
         if round == 0 {

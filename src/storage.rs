@@ -39,6 +39,18 @@ impl FlatStateStore {
         entry.balance += amount;
     }
 
+    pub fn transfer(&self, from: Address, to: Address, amount: u64) -> bool {
+        let mut w = self.accounts.write();
+        let from_acc = w.entry(from).or_default();
+        if from_acc.balance < amount {
+            return false;
+        }
+        from_acc.balance -= amount;
+        let to_acc = w.entry(to).or_default();
+        to_acc.balance += amount;
+        true
+    }
+
     pub fn get_slot(&self, addr: &Address, slot: &Hash256) -> u64 {
         self.storage_slots.read().get(&(*addr, *slot)).cloned().unwrap_or(0)
     }
@@ -77,6 +89,11 @@ impl FlatStateStore {
             }
         }
         map
+    }
+
+    pub fn export_all_contract_slots(&self) -> Vec<(Address, u64, u64)> {
+        let r = self.contract_slots.read();
+        r.iter().map(|((addr, slot), val)| (*addr, *slot, *val)).collect()
     }
 
     pub fn apply_batch(
