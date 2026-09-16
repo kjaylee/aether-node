@@ -70,115 +70,124 @@ impl NodeState {
         let mempool = EncryptedMempool::new();
         let store = FlatStateStore::new();
 
-        // Deposit initial balance to my validator & genesis accounts
-        store.deposit(identity.address, 1_000_000);
-        store.deposit(Address::new(101), 1_000_000);
-        store.deposit(Address::new(102), 500_000);
+        let state_path = get_state_path(port);
+        let (init_round, init_rewards) = if let Some((saved_round, saved_rewards)) = store.load_from_disk(&state_path) {
+            println!(" \x1b[1;32m✔ [디스크 상태 복원]\x1b[0m state.json 에서 계정 및 스마트 계약 상태 복원 완료! (라운드 R{}, 누적 보상 {} AETH)", saved_round, saved_rewards);
+            (saved_round, saved_rewards)
+        } else {
+            // Deposit initial balance to my validator & genesis accounts
+            store.deposit(identity.address, 1_000_000);
+            store.deposit(Address::new(101), 1_000_000);
+            store.deposit(Address::new(102), 500_000);
 
-        // Pre-deploy Genesis Smart Contracts for immediate interactivity
-        let genesis_creator = Address::new(101);
-        let (c1, s1) = SmartContractEngine::deploy(
-            genesis_creator,
-            0,
-            0,
-            "GenesisCounter",
-            "counter",
-            &[42],
-        );
-        store.register_contract(c1.clone());
-        for (slot, val) in s1 {
-            store.set_contract_slot(c1.address, slot, val);
-        }
+            // Pre-deploy Genesis Smart Contracts for immediate interactivity
+            let genesis_creator = Address::new(101);
+            let (c1, s1) = SmartContractEngine::deploy(
+                genesis_creator,
+                0,
+                0,
+                "GenesisCounter",
+                "counter",
+                &[42],
+            );
+            store.register_contract(c1.clone());
+            for (slot, val) in s1 {
+                store.set_contract_slot(c1.address, slot, val);
+            }
 
-        let (c2, s2) = SmartContractEngine::deploy(
-            genesis_creator,
-            1,
-            0,
-            "AetherCommunityToken",
-            "token",
-            &[1_000_000],
-        );
-        store.register_contract(c2.clone());
-        for (slot, val) in s2 {
-            store.set_contract_slot(c2.address, slot, val);
-        }
+            let (c2, s2) = SmartContractEngine::deploy(
+                genesis_creator,
+                1,
+                0,
+                "AetherCommunityToken",
+                "token",
+                &[1_000_000],
+            );
+            store.register_contract(c2.clone());
+            for (slot, val) in s2 {
+                store.set_contract_slot(c2.address, slot, val);
+            }
 
-        let (c3, s3) = SmartContractEngine::deploy(
-            genesis_creator,
-            2,
-            0,
-            "HighYieldVault",
-            "vault",
-            &[5],
-        );
-        store.register_contract(c3.clone());
-        for (slot, val) in s3 {
-            store.set_contract_slot(c3.address, slot, val);
-        }
+            let (c3, s3) = SmartContractEngine::deploy(
+                genesis_creator,
+                2,
+                0,
+                "HighYieldVault",
+                "vault",
+                &[5],
+            );
+            store.register_contract(c3.clone());
+            for (slot, val) in s3 {
+                store.set_contract_slot(c3.address, slot, val);
+            }
 
-        // 4. Ethereum Uniswap V2 AMM (ETH / USDC pool: 10,000 ETH, 20,000,000 USDC)
-        let (c4, s4) = SmartContractEngine::deploy(
-            genesis_creator,
-            3,
-            0,
-            "UniswapV2_ETH_USDC",
-            "uniswap_v2",
-            &[10_000, 20_000_000],
-        );
-        store.register_contract(c4.clone());
-        for (slot, val) in s4 {
-            store.set_contract_slot(c4.address, slot, val);
-        }
+            // 4. Ethereum Uniswap V2 AMM (ETH / USDC pool: 10,000 ETH, 20,000,000 USDC)
+            let (c4, s4) = SmartContractEngine::deploy(
+                genesis_creator,
+                3,
+                0,
+                "UniswapV2_ETH_USDC",
+                "uniswap_v2",
+                &[10_000, 20_000_000],
+            );
+            store.register_contract(c4.clone());
+            for (slot, val) in s4 {
+                store.set_contract_slot(c4.address, slot, val);
+            }
 
-        // 5. Ethereum MakerDAO CDP (ETH collateral: $2,000 price, 150% min collateral ratio)
-        let (c5, s5) = SmartContractEngine::deploy(
-            genesis_creator,
-            4,
-            0,
-            "MakerDAO_CDP",
-            "maker_cdp",
-            &[2_000, 150],
-        );
-        store.register_contract(c5.clone());
-        for (slot, val) in s5 {
-            store.set_contract_slot(c5.address, slot, val);
-        }
+            // 5. Ethereum MakerDAO CDP (ETH collateral: $2,000 price, 150% min collateral ratio)
+            let (c5, s5) = SmartContractEngine::deploy(
+                genesis_creator,
+                4,
+                0,
+                "MakerDAO_CDP",
+                "maker_cdp",
+                &[2_000, 150],
+            );
+            store.register_contract(c5.clone());
+            for (slot, val) in s5 {
+                store.set_contract_slot(c5.address, slot, val);
+            }
 
-        // 6. Solana Raydium AMM (SOL / USDC pool: 50,000 SOL, 7,500,000 USDC, 0.25% fee)
-        let (c6, s6) = SmartContractEngine::deploy(
-            genesis_creator,
-            5,
-            0,
-            "Raydium_SOL_USDC",
-            "raydium",
-            &[50_000, 7_500_000],
-        );
-        store.register_contract(c6.clone());
-        for (slot, val) in s6 {
-            store.set_contract_slot(c6.address, slot, val);
-        }
+            // 6. Solana Raydium AMM (SOL / USDC pool: 50,000 SOL, 7,500,000 USDC, 0.25% fee)
+            let (c6, s6) = SmartContractEngine::deploy(
+                genesis_creator,
+                5,
+                0,
+                "Raydium_SOL_USDC",
+                "raydium",
+                &[50_000, 7_500_000],
+            );
+            store.register_contract(c6.clone());
+            for (slot, val) in s6 {
+                store.set_contract_slot(c6.address, slot, val);
+            }
 
-        // 7. Solana SPL Token Program (SPL USDC Token: 100,000,000 initial supply)
-        let (c7, s7) = SmartContractEngine::deploy(
-            genesis_creator,
-            6,
-            0,
-            "SPL_USDC_Token",
-            "spl_token",
-            &[100_000_000],
-        );
-        store.register_contract(c7.clone());
-        for (slot, val) in s7 {
-            store.set_contract_slot(c7.address, slot, val);
-        }
+            // 7. Solana SPL Token Program (SPL USDC Token: 100,000,000 initial supply)
+            let (c7, s7) = SmartContractEngine::deploy(
+                genesis_creator,
+                6,
+                0,
+                "SPL_USDC_Token",
+                "spl_token",
+                &[100_000_000],
+            );
+            store.register_contract(c7.clone());
+            for (slot, val) in s7 {
+                store.set_contract_slot(c7.address, slot, val);
+            }
 
-        store.set_account(
-            genesis_creator,
-            aether_core::types::AccountState {
-                balance: 1_000_000,
-                nonce: 7,
-            },
-        );
+            store.set_account(
+                genesis_creator,
+                aether_core::types::AccountState {
+                    balance: 1_000_000,
+                    nonce: 7,
+                },
+            );
+
+            store.save_to_disk(0, 0, &state_path);
+            (0, 0)
+        };
 
         let mut state = NodeState {
             my_address: identity.address,
@@ -189,19 +198,21 @@ impl NodeState {
             mempool,
             store,
             peer_mgr,
-            round: 0,
+            round: init_round,
             total_txs: 0,
             last_tps: 134_959,
             vertices_cache: Vec::new(),
             round_parents: Vec::new(),
-            total_rewards: 0,
+            total_rewards: init_rewards,
             local_ip,
             port,
         };
 
-        // Initialize with 3 bootstrap rounds
-        for _ in 0..3 {
-            state.advance_round();
+        if init_round == 0 {
+            // Initialize with 3 bootstrap rounds on fresh start
+            for _ in 0..3 {
+                state.advance_round();
+            }
         }
         state
     }
@@ -309,7 +320,13 @@ fn sync_with_peer(peer_endpoint: &str, state: Arc<RwLock<NodeState>>) {
                 if sync_data.latest_round > s.round {
                     s.round = sync_data.latest_round;
                 }
-                println!(" [P2P 동기화 완료] 피어({})로부터 최신 상태 및 스마트 계약 동기화 성공!", endpoint);
+                // 4. Sync accounts
+                for (addr, acc) in sync_data.accounts {
+                    s.store.set_account(addr, acc);
+                }
+                let sp = get_state_path(s.port);
+                s.store.save_to_disk(s.round, s.total_rewards, &sp);
+                println!(" [P2P 동기화 완료] 피어({})로부터 최신 상태 및 스마트 계약 동기화 성공! (R{})", endpoint, s.round);
             }
         }
     });
@@ -573,6 +590,7 @@ fn handle_connection(
             vertices: s.dag.get_all_vertices(),
             contracts: s.store.list_contracts(),
             contract_slots: s.store.export_all_contract_slots(),
+            accounts: s.store.export_all_accounts(),
         };
         let json = serde_json::to_string(&resp).unwrap_or_default();
         send_json(&mut stream, &json);
@@ -691,6 +709,8 @@ fn handle_connection(
             let v = s.advance_round();
             s.store.deposit(s.my_address, 10);
             s.total_rewards += 10;
+            let sp = get_state_path(s.port);
+            s.store.save_to_disk(s.round, s.total_rewards, &sp);
             (s.round, v, s.peer_mgr.clone())
         };
         if let Some(v) = vertex_opt {
@@ -777,6 +797,8 @@ fn handle_connection(
                     let enc = s.scheme.encrypt(&tx);
                     s.mempool.submit(enc);
                     s.advance_round();
+                    let sp = get_state_path(s.port);
+                    s.store.save_to_disk(s.round, s.total_rewards, &sp);
                     (addr, s.round, tx, s.peer_mgr.clone())
                 };
 
@@ -831,6 +853,8 @@ fn handle_connection(
                         let enc = s.scheme.encrypt(&tx);
                         s.mempool.submit(enc);
                         s.advance_round();
+                        let sp = get_state_path(s.port);
+                        s.store.save_to_disk(s.round, s.total_rewards, &sp);
                         (s.round, tx, s.peer_mgr.clone())
                     };
 
@@ -969,6 +993,20 @@ fn send_json(stream: &mut TcpStream, json: &str) {
         json
     );
     let _ = stream.write_all(response.as_bytes());
+}
+
+pub fn get_state_path(custom_port: u16) -> std::path::PathBuf {
+    if let Ok(home) = std::env::var("HOME") {
+        let dir = std::path::PathBuf::from(home).join(".aether");
+        let _ = std::fs::create_dir_all(&dir);
+        if custom_port != 8080 {
+            dir.join(format!("state_{}.json", custom_port))
+        } else {
+            dir.join("state.json")
+        }
+    } else {
+        std::path::PathBuf::from(format!("./state_{}.json", custom_port))
+    }
 }
 
 fn load_or_create_identity(custom_port: u16) -> NodeIdentity {
@@ -1118,6 +1156,10 @@ fn main() {
                 let reward = 10;
                 s.store.deposit(s.my_address, reward);
                 s.total_rewards += reward;
+                if s.round % 3 == 0 {
+                    let sp = get_state_path(s.port);
+                    s.store.save_to_disk(s.round, s.total_rewards, &sp);
+                }
                 (s.round, v, s.peer_mgr.clone())
             };
 

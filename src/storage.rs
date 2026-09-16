@@ -1,7 +1,17 @@
 use crate::types::{AccountState, Address, ContractInfo, Hash256};
 use parking_lot::RwLock;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
+
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+pub struct PersistentChainState {
+    pub round: u64,
+    pub total_rewards: u64,
+    pub accounts: HashMap<String, AccountState>,
+    pub contracts: HashMap<String, ContractInfo>,
+    pub contract_slots: Vec<(String, u64, u64)>,
+}
 
 #[derive(Clone, Debug)]
 pub struct FlatStateStore {
@@ -94,6 +104,75 @@ impl FlatStateStore {
     pub fn export_all_contract_slots(&self) -> Vec<(Address, u64, u64)> {
         let r = self.contract_slots.read();
         r.iter().map(|((addr, slot), val)| (*addr, *slot, *val)).collect()
+    }
+
+    pub fn export_all_accounts(&self) -> Vec<(Address, AccountState)> {
+        let r = self.accounts.read();
+        r.iter().map(|(k, v)| (*k, v.clone())).collect()
+    }
+
+    pub fn save_to_disk(&self, round: u64, total_rewards: u64, path: &std::path::Path) {
+        let acc_r = self.accounts.read();
+        let c_r = self.contracts.read();
+        let cs_r = self.contract_slots.read();
+
+        let mut p_accounts = HashMap::new();
+        for (addr, state) in acc_r.iter() {
+            p_accounts.insert(addr.to_hex(), state.clone());
+        }
+
+        let mut p_contracts = HashMap::new();
+        for (addr, c) in c_r.iter() {
+            p_contracts.insert(addr.to_hex(), c.clone());
+        }
+
+        let mut p_slots = Vec::new();
+        for ((addr, slot), val) in cs_r.iter() {
+            p_slots.push((addr.to_hex(), *slot, *val));
+        }
+
+        let state = PersistentChainState {
+            round,
+            total_rewards,
+            accounts: p_accounts,
+            contracts: p_contracts,
+            contract_slots: p_slots,
+        };
+
+        if let Ok(json) = serde_json::to_string_pretty(&state) {
+            let tmp_path = path.with_extension("tmp");
+            if std::fs::write(&tmp_path, json).is_ok() {
+                let _ = std::fs::rename(tmp_path, path);
+            }
+        }
+    }
+
+    pub fn load_from_disk(&self, path: &std::path::Path) -> Option<(u64, u64)> {
+        let content = std::fs::read_to_string(path).ok()?;
+        let state: PersistentChainState = serde_json::from_str(&content).ok()?;
+
+        let mut acc_w = self.accounts.write();
+        for (addr_str, acc) in state.accounts {
+            if let Some(addr) = Address::from_hex(&addr_str) {
+                acc_w.insert(addr, acc);
+            }
+        }
+
+        let mut c_w = self.contracts.write();
+        for (addr_str, c) in state.contracts {
+            if let Some(addr) = Address::from_hex(&addr_str) {
+                c_w.insert(addr, c);
+            }
+        }
+
+        let mut cs_w = self.contract_slots.write();
+        for (addr_str, slot, val) in state.contract_slots {
+            if let Some(addr) = Address::from_hex(&addr_str) {
+                cs_w.insert((addr, slot), val);
+            }
+        }
+
+        Some((state.round, state.total_rewards))
     }
 
     pub fn apply_batch(

@@ -202,6 +202,8 @@ pub struct SyncResponse {
     pub vertices: Vec<Vertex>,
     pub contracts: Vec<ContractInfo>,
     pub contract_slots: Vec<(Address, u64, u64)>,
+    #[serde(default)]
+    pub accounts: Vec<(Address, AccountState)>,
 }
 
 pub mod hex {
