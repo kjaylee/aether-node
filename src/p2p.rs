@@ -489,20 +489,30 @@ pub fn start_nat_traversal(peer_mgr: PeerManager, local_ip: String, port: u16) {
 pub const DEFAULT_BOOTNODES: &[&str] = &[
     "14.32.162.195:8080", // Jay's Sovereign Seed Node (Public WAN UPnP)
     "192.168.0.4:8080",   // LAN fallback
+    "127.0.0.1:8080",     // Local fallback
+    "127.0.0.1:8081",
 ];
 
-/// Automatically connect to seed bootnodes upon startup
+/// Automatically connect to seed bootnodes with continuous background auto-peering
 pub fn start_bootnode_discovery(peer_mgr: PeerManager) {
     thread::spawn(move || {
-        // Wait 1.5s for local TCP server to start
+        // Initial delay for server startup
         thread::sleep(Duration::from_millis(1500));
-        for &seed in DEFAULT_BOOTNODES {
-            if peer_mgr.contains_endpoint(seed) {
-                continue;
-            }
-            if let Ok(info) = peer_mgr.connect_peer(seed) {
-                println!(" \x1b[1;32m✔ [부트노드 자동 피어링]\x1b[0m 시드 노드({}: {}) 연결 성공!", seed, info.node_id);
-                break;
+        loop {
+            if peer_mgr.count() == 0 {
+                for &seed in DEFAULT_BOOTNODES {
+                    if peer_mgr.contains_endpoint(seed) {
+                        continue;
+                    }
+                    if let Ok(info) = peer_mgr.connect_peer(seed) {
+                        println!(" \x1b[1;32m✔ [부트노드 자동 피어링]\x1b[0m 시드 노드({}: {}) 연결 성공!", seed, info.node_id);
+                        break;
+                    }
+                }
+                thread::sleep(Duration::from_secs(3));
+            } else {
+                // If peers are active, keep alive check every 15s
+                thread::sleep(Duration::from_secs(15));
             }
         }
     });
